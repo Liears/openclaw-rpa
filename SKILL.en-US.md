@@ -1,7 +1,7 @@
 ---
 name: openclaw-rpa
 language: en-US
-description: English instructions for openclaw-rpa (loaded when config.json locale is en-US).
+description: English body for openclaw-rpa. AI records browser + local-file actions into a Playwright RPA script; replay without LLM saves compute and avoids hallucinated steps (loaded when config.json locale is en-US).
 metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 ---
 
@@ -9,7 +9,27 @@ metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 
 # openclaw-rpa
 
-OpenClaw RPA recording and Playwright code generation.
+## Introduction
+
+With **AI assistance**, this skill **records** actions on common websites and (when needed) **local file** behavior into a **Playwright Python RPA script**. **Replay** runs that script directly—**without** the LLM operating the browser every time—so you **save compute/API cost** and get **repeatable, accurate** steps instead of **hallucination-prone** “let the model improvise each run.”
+
+The output is **ordinary Python**: you may still add **local file** helpers after **`record-end`** (`pathlib` / `shutil` / `open()`, or **`extract_text`** during recording)—browser-only, file-only, or both.
+
+## Scope (details)
+
+**In the browser** — Clicks, typing, selects, scroll, wait, screenshots; multi-step flows are first-class. Extracting page text is **one** option.
+
+**On disk (optional)** — While recording, **`extract_text`** can write text under the user’s home. After **`record-end`**, edit `rpa/*.py` per [playwright-templates.md](playwright-templates.md).
+
+**Out of scope** — Large ETL, databases, or heavy OS automation.
+
+### Examples (illustrative)
+
+| Pattern | Example |
+|---------|---------|
+| **Browser only** | Demo store: search → product → cart (`rpa/电商网站购物*.py` style). |
+| **Browser then files** | Same flow, plus **`extract_text`** when asked. |
+| **Files only in script** | After **`record-end`**, add folder cleanup—**no URL** for that block. |
 
 ## Troubleshooting: `LLM request timed out` (not the record-step timeout)
 
@@ -55,11 +75,12 @@ IDLE ──"run:{task}"──► RUN ──► IDLE
 ```
 🤖 OpenClaw RPA lab ready
 
-I will drive a real headed browser you can see, capture screenshots, and compile a standalone Python automation script.
+With AI help, we’ll record what you do in a real browser (and local file steps if you need them) and compile it into an RPA script you can run again and again.
+Later runs use that script directly—no need for the model to drive every click—saving compute and keeping steps consistent (vs. LLM hallucinations on fragile actions).
 
 How it works:
 1. Give me a task name
-2. Give instructions → I execute in the browser and show screenshots
+2. Give instructions → I run the real steps in the browser and show screenshots
 3. Say "end recording" → I compile the recorded steps into an RPA script
 
 Common commands:

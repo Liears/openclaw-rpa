@@ -1,6 +1,6 @@
 ---
 name: openclaw-rpa
-description: OpenClaw RPA 录制与代码合成引擎。当用户完整输入"#自动化机器人"或"#RPA"或"#rpa"时触发，进入引导式录制流程，执行网页/文件原子操作并全程记录，最终合成可独立运行的 Playwright Python 脚本。Use when user says 自动化机器人, RPA, 录制自动化, 生成脚本, Playwright automation, or asks to automate repetitive browser/file tasks.
+description: 借助 AI 将常见网页与本机文件操作录制成可重复运行的 RPA（Playwright Python）；日常执行跑脚本、少依赖模型，省算力且步骤稳定，降低幻觉风险。触发：「自动化机器人」「RPA」等。Use when user says 自动化机器人, RPA, 录制自动化, 生成脚本, Playwright automation, or asks to automate repetitive browser/file tasks.
 metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 ---
 
@@ -8,7 +8,21 @@ metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 
 # openclaw-rpa
 
-OpenClaw RPA 录制与代码合成引擎。
+## 简介
+
+借助 **AI**，把你在**常见网站**上的操作，以及需要的**本机文件**行为，**录制成可重复运行的 RPA 脚本**（Python / Playwright）。日常执行**直接跑脚本**，不必每次让模型现场操作网页——**省算力（少调模型）**，且步骤按录制固定执行，**更稳**，**降低模型幻觉**带来的误操作。
+
+生成物为普通 Python：录制中可用 **`extract_text`**；**`record-end`** 后可按需追加 **`pathlib` / `shutil` / `open()`**，见 [playwright-templates.md](playwright-templates.md)。浏览器与本地文件可只做其一，也可组合。
+
+**不强调** — 重型 ETL、数据库或大型系统运维；请用专门工具。
+
+### 说明性例子（非穷举）
+
+| 类型 | 含义 |
+|------|------|
+| **仅浏览器** | 如电商类：搜索 → 商品 → 加购（参考仓库 `rpa/电商网站购物*.py`）。 |
+| **浏览器 + 文件** | 同上，必要时 **`extract_text`** 落盘。 |
+| **脚本内文件** | 录完后只加整理下载目录、改名等——可与网页无关。 |
 
 ## 故障排查：`LLM request timed out`（与录制超时不同）
 
@@ -52,12 +66,13 @@ IDLE ──"运行：{任务名}"──► RUN ──► IDLE
 ```
 🤖 OpenClaw RPA 实验室已就绪
 
-我将用真实的有界面浏览器演示你的操作，全程可见、可核对，最终合成可独立运行的自动化程序。
+在 AI 协助下，把你在常见网站上的操作、以及需要的本机文件步骤，录制成可反复执行的 RPA 脚本。
+之后日常直接跑脚本即可，不必每次让模型现场点网页——省算力，步骤按录制执行，少受幻觉影响。
 
 工作方式：
 1. 告诉我任务名称
-2. 下达指令 → 我在浏览器里执行，截图给你确认
-3. 说"结束录制" → 我把真实操作步骤编译成 RPA 脚本
+2. 下达指令 → 我在浏览器里真实执行，截图给你确认
+3. 说"结束录制" → 我把录制步骤编译成 RPA 脚本
 
 常用指令：
 • 输入"结束录制" → 生成可独立运行的 Playwright 脚本

@@ -1,6 +1,12 @@
 # openclaw-rpa
 
-OpenClaw RPA skill: **headed browser recording**, plan-based steps, and **standalone Playwright Python** scripts.
+English | **[中文](README.zh-CN.md)**
+
+With **AI assistance**, record how you work on **typical websites** plus any **local file** steps you need, and compile that into a **repeatable RPA script** (Python / Playwright). **Everyday runs execute the script directly**—you don’t need the model to drive each click each time, which **saves compute** and keeps behavior **deterministic** (fewer surprises than ad-hoc LLM automation).
+
+**Covers:** real browser interactions; optional read/write/rename/organize files in the same script, browser-only or file-only blocks.
+
+**Example:** schedule the same checkout/form script daily, or add a block that only cleans `Downloads`—repeat runs **without** paying for full LLM-driven control each time.
 
 ## Requirements
 
@@ -84,15 +90,6 @@ Pre-generated scripts and command logs live under **`rpa/`**. Good starting poin
 
 **examples/README.md** lists curated recommendations and cautions.
 
-## Publish to GitHub
-
-Create an **empty** public repository on GitHub, then:
-
-```bash
-git remote add origin https://github.com/<you>/<repo>.git
-git push -u origin main
-```
-
 ## License
 
-MIT — see `LICENSE`.
+[Apache License 2.0](LICENSE) — Copyright © 2026 openclaw-rpa contributors.
