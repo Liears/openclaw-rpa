@@ -6,7 +6,7 @@ English | **[中文](README.zh-CN.md)**
 
 Sauce Demo ([saucedemo.com](https://www.saucedemo.com)) e-commerce screen recording.
 
-> **Note:** GitHub README **does not render** third-party `<iframe>` embeds (they show as raw HTML). **Open the link below** to watch on Bilibili.
+> **Note:** Bilibili `<iframe>` cannot be embedded in README. For **GitHub-native video**, use the compressed file **`saucedemo-readme.mp4`** (≤10MB): drag it into an **Issue/PR comment**, copy the generated Markdown into README for inline playback ([docs](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/attaching-files)). Or open **[blob preview](https://github.com/laziobird/openclaw-rpa/blob/main/saucedemo-readme.mp4)** for GitHub’s player.
 
 ### [▶ Watch on Bilibili (BV1YfXrBBE9u)](https://www.bilibili.com/video/BV1YfXrBBE9u/)
 
@@ -16,9 +16,9 @@ Sauce Demo ([saucedemo.com](https://www.saucedemo.com)) e-commerce screen record
 
 <p align="center">
   <sub>
-    Fallback: <a href="https://github.com/laziobird/openclaw-rpa/blob/main/output.mp4">GitHub file view</a>
-    · <a href="https://github.com/laziobird/openclaw-rpa/raw/main/output.mp4">raw MP4</a>
-    · <a href="output.mp4"><code>output.mp4</code></a> in repo
+    Compressed demo: <a href="saucedemo-readme.mp4"><code>saucedemo-readme.mp4</code></a> (~7.7MB, H.264) ·
+    <a href="https://github.com/laziobird/openclaw-rpa/blob/main/saucedemo-readme.mp4">GitHub preview</a>
+    · <a href="https://github.com/laziobird/openclaw-rpa/raw/main/saucedemo-readme.mp4">raw</a>
   </sub>
 </p>
 

@@ -22,3 +22,6 @@ venv/
 
 # Logs (if any)
 *.log
+
+# Full-resolution local master (optional); README uses compressed saucedemo-readme.mp4
+/saucedemo.mp4
