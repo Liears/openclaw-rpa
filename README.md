@@ -4,22 +4,15 @@ English | **[中文](README.zh-CN.md)**
 
 ## Demo video
 
-Sauce Demo ([saucedemo.com](https://www.saucedemo.com)) e-commerce screen recording.
+Watch a short **Sauce Demo** ([saucedemo.com](https://www.saucedemo.com)) recording: **sign in → sort → add to cart → sign out**.
 
-> **Note:** Bilibili `<iframe>` cannot be embedded in README. For **GitHub-native video**, use the compressed file **`saucedemo-readme.mp4`** (≤10MB): drag it into an **Issue/PR comment**, copy the generated Markdown into README for inline playback ([docs](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/attaching-files)). Or open **[blob preview](https://github.com/laziobird/openclaw-rpa/blob/main/saucedemo-readme.mp4)** for GitHub’s player.
-
-### [▶ Watch on Bilibili (BV1YfXrBBE9u)](https://www.bilibili.com/video/BV1YfXrBBE9u/)
+| Where | Link |
+|:--|:--|
+| **Bilibili (recommended)** | **[▶ Play](https://www.bilibili.com/video/BV1YfXrBBE9u/)** (BV1YfXrBBE9u) |
+| **In this repo** | **[▶ Play on GitHub](https://github.com/laziobird/openclaw-rpa/blob/main/saucedemo-readme.mp4)** (`saucedemo-readme.mp4`) |
 
 <p align="center">
   <a href="https://www.bilibili.com/video/BV1YfXrBBE9u/"><img src="https://img.shields.io/badge/bilibili-Watch_demo-00A1D6?style=for-the-badge&logo=bilibili&logoColor=white" alt="Watch on Bilibili"></a>
-</p>
-
-<p align="center">
-  <sub>
-    Compressed demo: <a href="saucedemo-readme.mp4"><code>saucedemo-readme.mp4</code></a> (~7.7MB, H.264) ·
-    <a href="https://github.com/laziobird/openclaw-rpa/blob/main/saucedemo-readme.mp4">GitHub preview</a>
-    · <a href="https://github.com/laziobird/openclaw-rpa/raw/main/saucedemo-readme.mp4">raw</a>
-  </sub>
 </p>
 
 **Steps in the video (conversation)**

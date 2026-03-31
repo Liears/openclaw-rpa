@@ -4,22 +4,15 @@
 
 ## 演示视频
 
-Sauce Demo（[saucedemo.com](https://www.saucedemo.com)）电商购物流程录屏。
+先看一段 **Sauce Demo**（[saucedemo.com](https://www.saucedemo.com)）上的录屏，直观了解本技能在浏览器里如何完成 **登录 → 排序 → 加购 → 登出**。
 
-> **说明：** B 站 `<iframe>` 不能嵌在 README 里；**GitHub 原生视频**请用仓库内压缩版（约 **≤10MB**）**`saucedemo-readme.mp4`**：拖到 **Issue/PR 评论框**上传后，把生成的那段 Markdown **贴回 README**，即可在网页里直接播放（见 [官方说明](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/attaching-files)）。也可在 **[blob 预览页](https://github.com/laziobird/openclaw-rpa/blob/main/saucedemo-readme.mp4)** 用 GitHub 自带播放器打开。
-
-### [▶ 在哔哩哔哩观看演示视频（BV1YfXrBBE9u）](https://www.bilibili.com/video/BV1YfXrBBE9u/)
-
-<p align="center">
-  <a href="https://www.bilibili.com/video/BV1YfXrBBE9u/"><img src="https://img.shields.io/badge/bilibili-点击播放演示-00A1D6?style=for-the-badge&logo=bilibili&logoColor=white" alt="在哔哩哔哩播放"></a>
-</p>
+| 观看方式 | 链接 |
+|:--|:--|
+| **哔哩哔哩（推荐，高清）** | **[▶ 点击播放](https://www.bilibili.com/video/BV1YfXrBBE9u/)**（BV1YfXrBBE9u） |
+| **本仓库录屏** | **[▶ 在 GitHub 上播放](https://github.com/laziobird/openclaw-rpa/blob/main/saucedemo-readme.mp4)**（`saucedemo-readme.mp4`，页内即可点播放） |
 
 <p align="center">
-  <sub>
-    仓库内压缩演示：<a href="saucedemo-readme.mp4"><code>saucedemo-readme.mp4</code></a>（约 7.7MB，H.264）·
-    <a href="https://github.com/laziobird/openclaw-rpa/blob/main/saucedemo-readme.mp4">GitHub 预览</a>
-    · <a href="https://github.com/laziobird/openclaw-rpa/raw/main/saucedemo-readme.mp4">直链</a>
-  </sub>
+  <a href="https://www.bilibili.com/video/BV1YfXrBBE9u/"><img src="https://img.shields.io/badge/bilibili-播放演示-00A1D6?style=for-the-badge&logo=bilibili&logoColor=white" alt="哔哩哔哩播放"></a>
 </p>
 
 **与视频一致的对话步骤**
