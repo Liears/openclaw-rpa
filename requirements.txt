@@ -1,0 +1,2 @@
+# OpenClaw RPA — Python deps (see README for system Python / venv setup)
+playwright>=1.40.0,<2

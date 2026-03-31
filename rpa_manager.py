@@ -1,0 +1,970 @@
+#!/usr/bin/env python3
+"""
+OpenClaw RPA Manager — 状态持久化 & 脚本生成 CLI
+
+【Recorder 模式 — 推荐，有界面真实录制】
+  python3 rpa_manager.py record-start <task>   # 启动 headed Playwright，等待浏览器就绪
+  python3 rpa_manager.py record-step '<json>'  # 执行单步操作（含 select_option 原生下拉框）
+  python3 rpa_manager.py record-status         # 查看 Recorder 运行状态与已录步骤
+  python3 rpa_manager.py record-end            # 关闭浏览器，编译并保存 RPA 脚本
+  python3 rpa_manager.py record-end --abort    # 放弃录制，清理会话
+  # 每步指令与生成代码片段追加写入 recorder_session/playwright_commands.jsonl；
+  # record-end 成功后复制到 rpa/{任务slug}_playwright_commands.jsonl
+
+【Legacy 模式 — 兼容保留，须手动提供截图证明】
+  python3 rpa_manager.py init <task_name>
+  python3 rpa_manager.py add --proof <文件> '<json>'
+  python3 rpa_manager.py generate
+
+【通用命令】
+  python3 rpa_manager.py run <task_name>
+  python3 rpa_manager.py list
+  python3 rpa_manager.py status
+  python3 rpa_manager.py reset
+"""
+
+import argparse
+import json
+import re
+import shutil
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
+
+import envcheck
+
+SKILL_DIR        = Path(__file__).parent
+SESSION_FILE     = SKILL_DIR / "session.json"
+REGISTRY_FILE    = SKILL_DIR / "registry.json"
+RPA_DIR          = SKILL_DIR / "rpa"
+PROOFS_DIR       = SKILL_DIR / "proofs"
+SESSION_REC_DIR  = SKILL_DIR / "recorder_session"  # Recorder 模式专用目录
+# 录制时每一步 record-step 追加一行 JSON（含指令与生成的 Playwright 代码片段）
+PLAYWRIGHT_CMD_LOG = SESSION_REC_DIR / "playwright_commands.jsonl"
+
+# record-step 等待 recorder_server 写出 result_{seq}.json 的最长时间
+RECORD_STEP_RESULT_WAIT_S   = 120
+RECORD_STEP_POLL_INTERVAL_S = 0.2
+RECORD_STEP_POLL_ITERATIONS = int(RECORD_STEP_RESULT_WAIT_S / RECORD_STEP_POLL_INTERVAL_S)  # 600
+
+# 证明文件最小字节数（避免空文件 / 未真实截图）
+MIN_PROOF_BYTES = 64
+
+
+# ── 状态管理 ────────────────────────────────────────────────
+
+def load_session() -> dict:
+    if SESSION_FILE.exists():
+        return json.loads(SESSION_FILE.read_text(encoding="utf-8"))
+    return {"task": None, "state": "IDLE", "buffer": []}
+
+
+def save_session(session: dict):
+    SESSION_FILE.write_text(json.dumps(session, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def load_registry() -> dict:
+    if REGISTRY_FILE.exists():
+        return json.loads(REGISTRY_FILE.read_text(encoding="utf-8"))
+    return {}
+
+
+def save_registry(registry: dict):
+    REGISTRY_FILE.write_text(json.dumps(registry, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+# ── 命令实现 ────────────────────────────────────────────────
+
+def _proof_dir_for_task(task_name: str) -> Path:
+    slug = _slugify(task_name)
+    return PROOFS_DIR / slug
+
+
+def cmd_init(task_name: str) -> int:
+    PROOFS_DIR.mkdir(parents=True, exist_ok=True)
+    pdir = _proof_dir_for_task(task_name)
+    if pdir.exists():
+        shutil.rmtree(pdir)
+    pdir.mkdir(parents=True, exist_ok=True)
+
+    session = {
+        "task": task_name,
+        "state": "RECORDING",
+        "buffer": [],
+        "created_at": datetime.now().isoformat(),
+    }
+    save_session(session)
+    print(f"✅ 录制会话已初始化：「{task_name}」")
+    print("Action Buffer 已清空，proofs 目录已重置。")
+    print(f"证明目录：{pdir}")
+    print("下一步：每步必须先浏览器实操成功，再带 --proof 调用 add。")
+    return 0
+
+
+def _validate_proof_file(path: Path):
+    if not path.exists():
+        return False, f"证明路径不存在：{path}"
+    if not path.is_file():
+        return False, f"证明路径不是普通文件：{path}"
+    try:
+        sz = path.stat().st_size
+    except OSError as e:
+        return False, f"无法读取证明文件：{e}"
+    if sz < MIN_PROOF_BYTES:
+        return False, f"证明文件过小（{sz} < {MIN_PROOF_BYTES} 字节），拒绝记录"
+    return True, ""
+
+
+def cmd_add(action_json: str, proof_path: str) -> int:
+    session = load_session()
+    if session["state"] != "RECORDING":
+        print(f"❌ 当前状态为 {session['state']}，未处于录制中。请先执行 init <task_name>", file=sys.stderr)
+        return 1
+
+    src = Path(proof_path).expanduser().resolve()
+    ok, err = _validate_proof_file(src)
+    if not ok:
+        print(f"❌ 拒绝记录：{err}", file=sys.stderr)
+        return 1
+
+    try:
+        action = json.loads(action_json)
+    except json.JSONDecodeError as e:
+        print(f"❌ 无效 JSON：{e}", file=sys.stderr)
+        return 1
+
+    task_name = session.get("task") or "task"
+    step_n = len(session["buffer"]) + 1
+    dest_dir = _proof_dir_for_task(task_name)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    suffix = src.suffix if src.suffix else ".bin"
+    dest = dest_dir / f"step_{step_n:02d}{suffix}"
+    shutil.copy2(src, dest)
+
+    action["step"] = step_n
+    action.setdefault("timestamp", datetime.now().isoformat())
+    action["proof"] = str(dest)
+    action["proof_source"] = str(src)
+
+    session["buffer"].append(action)
+    save_session(session)
+    print(f"✅ [步骤 {action['step']}] 已提交证明 → {dest}")
+    print(f"   {action.get('context', '已记录')}（共 {len(session['buffer'])} 步）")
+    return 0
+
+
+def cmd_status() -> int:
+    session = load_session()
+    print(f"状态：{session['state']}")
+    print(f"任务：{session.get('task') or '无'}")
+    buf = session.get("buffer", [])
+    print(f"已录制步骤：{len(buf)}（每步须含有效 proof）")
+    for a in buf:
+        pf = a.get("proof", "")
+        ok = "✅" if pf and Path(pf).is_file() else "❌"
+        print(
+            f"  [{a['step']}] {ok} {a.get('category','?')}:{a.get('action','?')} — {a.get('context','')}"
+        )
+        if pf:
+            print(f"       proof: {pf}")
+    return 0
+
+
+def cmd_generate() -> int:
+    session = load_session()
+    buf = session.get("buffer", [])
+    if not buf:
+        print("❌ Action Buffer 为空，无法生成脚本。", file=sys.stderr)
+        return 1
+
+    # 强制：每步必须有可验证的 proof，否则拒绝生成
+    for a in buf:
+        pf = a.get("proof")
+        if not pf:
+            print(
+                f"❌ 拒绝生成：步骤 {a.get('step')} 缺少 proof 字段。"
+                "请用「浏览器实操成功 → 保存截图/结果文件 → add --proof」重新录制。",
+                file=sys.stderr,
+            )
+            return 1
+        p = Path(pf)
+        ok, err = _validate_proof_file(p)
+        if not ok:
+            print(f"❌ 拒绝生成：步骤 {a.get('step')} 的证明无效：{err}", file=sys.stderr)
+            return 1
+
+    task_name = session.get("task") or "task"
+    filename = _slugify(task_name)
+    RPA_DIR.mkdir(exist_ok=True)
+    output_path = RPA_DIR / f"{filename}.py"
+
+    script = _build_playwright_script(task_name, buf)
+    output_path.write_text(script, encoding="utf-8")
+
+    registry = load_registry()
+    registry[task_name] = f"{filename}.py"
+    save_registry(registry)
+
+    # 重置会话
+    save_session({"task": None, "state": "IDLE", "buffer": []})
+
+    print(f"✨ RPA 脚本生成成功！")
+    print(f"📄 文件：{output_path}")
+    print(f"📋 共录制 {len(buf)} 个步骤")
+    print(f"\n运行方式：python3 {output_path}")
+    print(f'下次直接说"运行：{task_name}"即可重放。')
+    return 0
+
+
+def cmd_run(task_name: str) -> int:
+    registry = load_registry()
+    if task_name not in registry:
+        available = list(registry.keys())
+        print(f"❌ 未找到任务「{task_name}」。", file=sys.stderr)
+        if available:
+            print(f"   可用任务：{', '.join(available)}", file=sys.stderr)
+        else:
+            print("   暂无已录制任务，请先录制。", file=sys.stderr)
+        return 1
+
+    script_path = RPA_DIR / registry[task_name]
+    if not script_path.exists():
+        print(f"❌ 脚本文件不存在：{script_path}", file=sys.stderr)
+        return 1
+
+    if envcheck.ensure_playwright_chromium(auto_install=True) != 0:
+        return 1
+
+    print(f"▶️  正在运行「{task_name}」…")
+    result = subprocess.run([sys.executable, str(script_path)])
+    if result.returncode == 0:
+        print(f"✅ 运行完毕：「{task_name}」")
+    else:
+        print(f"❌ 运行失败（exit code {result.returncode}）", file=sys.stderr)
+    return result.returncode
+
+
+def cmd_list() -> int:
+    registry = load_registry()
+    if not registry:
+        print("暂无已录制的任务。")
+        return 0
+    print("已录制的 RPA 任务：")
+    for task, filename in registry.items():
+        exists = "✅" if (RPA_DIR / filename).exists() else "❌ 文件缺失"
+        print(f"  {exists}  「{task}」→ rpa/{filename}")
+    return 0
+
+
+def cmd_reset() -> int:
+    session = load_session()
+    task = session.get("task")
+    if task:
+        pdir = _proof_dir_for_task(task)
+        if pdir.exists():
+            shutil.rmtree(pdir)
+            print(f"🗑️  已删除证明目录：{pdir}")
+    save_session({"task": None, "state": "IDLE", "buffer": []})
+    print("🗑️  录制已放弃，Action Buffer 已清空。")
+    return 0
+
+
+# ── 计划管理命令（多步指令拆解，防 LLM 超时）──────────────────────────────
+
+PLAN_FILE = SESSION_REC_DIR / "plan.json"
+
+
+def _load_plan() -> Optional[dict]:
+    if PLAN_FILE.exists():
+        try:
+            return json.loads(PLAN_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return None
+
+
+def cmd_plan_set(steps_json: str) -> int:
+    """Initialize a multi-step execution plan."""
+    try:
+        steps = json.loads(steps_json)
+    except json.JSONDecodeError as e:
+        print(f"❌ 无效 JSON：{e}", file=sys.stderr)
+        return 1
+
+    if not isinstance(steps, list) or not steps:
+        print("❌ steps 必须是非空字符串数组，如 '[\"步骤1\", \"步骤2\"]'", file=sys.stderr)
+        return 1
+
+    SESSION_REC_DIR.mkdir(parents=True, exist_ok=True)
+    plan = {
+        "steps": [str(s) for s in steps],
+        "current": 1,
+        "total": len(steps),
+        "created_at": datetime.now().isoformat(),
+    }
+    PLAN_FILE.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print(f"📋 任务计划已创建（共 {len(steps)} 步）：")
+    for i, step in enumerate(steps, 1):
+        marker = "▶️ " if i == 1 else "  "
+        print(f"  {marker}{i}. {step}")
+    print(f"\n当前执行：第 1/{len(steps)} 步")
+    return 0
+
+
+def cmd_plan_next() -> int:
+    """Advance plan to next step."""
+    plan = _load_plan()
+    if plan is None:
+        print("❌ 无活跃计划。请先执行 plan-set。", file=sys.stderr)
+        return 1
+
+    current = plan["current"]
+    total   = plan["total"]
+
+    if current >= total:
+        print(f"🎉 所有 {total} 步均已完成！")
+        print('请说「结束录制」生成 RPA 脚本。')
+        return 0
+
+    plan["current"] = current + 1
+    PLAN_FILE.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    next_desc = plan["steps"][plan["current"] - 1]
+    print(f"📍 进度：{plan['current']}/{total}")
+    print(f"当前步骤：{next_desc}")
+    return 0
+
+
+def cmd_plan_status() -> int:
+    """Show current plan progress."""
+    plan = _load_plan()
+    if plan is None:
+        print("ℹ️  无活跃计划。")
+        return 0
+
+    current = plan["current"]
+    total   = plan["total"]
+    print(f"📋 任务计划进度（{current}/{total} 步）：")
+    for i, step in enumerate(plan["steps"], 1):
+        if i < current:
+            marker = "✅"
+        elif i == current:
+            marker = "▶️ "
+        else:
+            marker = "⬜"
+        print(f"  {marker} {i}. {step}")
+    return 0
+
+
+# ── Recorder 模式命令 ───────────────────────────────────────────────────────
+
+def _rec_current_seq() -> int:
+    """Return current cmd seq from recorder cmd.json, or -1."""
+    p = SESSION_REC_DIR / "cmd.json"
+    if p.exists():
+        try:
+            return json.loads(p.read_text()).get("seq", -1)
+        except Exception:
+            pass
+    return -1
+
+
+def _append_playwright_cmd_log(entry: dict) -> None:
+    """Append one JSON object per line (JSONL) for audit / debugging."""
+    PLAYWRIGHT_CMD_LOG.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(entry, ensure_ascii=False) + "\n"
+    with open(PLAYWRIGHT_CMD_LOG, "a", encoding="utf-8") as f:
+        f.write(line)
+
+
+def _rec_send_shutdown():
+    """Write shutdown command to recorder IPC."""
+    cmd_path = SESSION_REC_DIR / "cmd.json"
+    seq = _rec_current_seq()
+    cmd_path.write_text(json.dumps({"action": "shutdown", "seq": seq + 1}))
+    time.sleep(1.0)
+
+
+def cmd_record_start(task_name: str) -> int:
+    """Launch headed Playwright recorder server and wait for ready."""
+    if envcheck.ensure_playwright_chromium(auto_install=True) != 0:
+        return 1
+
+    # Clean up any stale session
+    if SESSION_REC_DIR.exists():
+        shutil.rmtree(SESSION_REC_DIR)
+    SESSION_REC_DIR.mkdir(parents=True)
+
+    # Write task info so recorder_server.py can read it
+    (SESSION_REC_DIR / "task.json").write_text(
+        json.dumps({"task": task_name}, ensure_ascii=False)
+    )
+
+    server_script = SKILL_DIR / "recorder_server.py"
+    if not server_script.exists():
+        print(f"❌ recorder_server.py 不存在：{server_script}", file=sys.stderr)
+        return 1
+
+    log_path = SESSION_REC_DIR / "server.log"
+    with open(log_path, "w") as log:
+        proc = subprocess.Popen(
+            [sys.executable, str(server_script)],
+            stdout=log,
+            stderr=log,
+            start_new_session=True,
+        )
+
+    print(f"⏳ 正在启动 Recorder（PID: {proc.pid}），等待浏览器窗口就绪…")
+
+    # Poll for ready signal (up to 30 s)
+    ready_path = SESSION_REC_DIR / "ready"
+    for _ in range(150):  # 150 × 0.2 s = 30 s
+        if ready_path.exists():
+            break
+        time.sleep(0.2)
+    else:
+        print("❌ Recorder 启动超时（30s）。", file=sys.stderr)
+        print(f"   详细日志：{log_path}", file=sys.stderr)
+        return 1
+
+    print(f"✅ Recorder 已就绪！浏览器窗口已打开，请注视屏幕。")
+    print(f"   任务：「{task_name}」")
+    print(f"   截图保存至：{SESSION_REC_DIR / 'screenshots'}")
+    _append_playwright_cmd_log(
+        {
+            "type": "session",
+            "event": "start",
+            "ts": datetime.now().isoformat(),
+            "task": task_name,
+            "log_path": str(PLAYWRIGHT_CMD_LOG),
+        }
+    )
+    print(f"   📝 Playwright 指令日志（每步追加）：{PLAYWRIGHT_CMD_LOG}")
+    print()
+    print("下一步建议：先发一条 snapshot 了解页面元素，再执行 goto/fill/select_option/click 等操作。")
+    print('示例：python3 rpa_manager.py record-step \'{"action":"snapshot"}\'')
+    return 0
+
+
+def cmd_record_step(step_json: str) -> int:
+    """Send one step command to the recorder server and print result."""
+    try:
+        data = json.loads(step_json)
+    except json.JSONDecodeError as e:
+        print(f"❌ 无效 JSON：{e}", file=sys.stderr)
+        return 1
+
+    pid_path = SESSION_REC_DIR / "server.pid"
+    if not pid_path.exists():
+        print("❌ Recorder 未在运行。请先执行 record-start <task>。", file=sys.stderr)
+        return 1
+
+    cmd_path   = SESSION_REC_DIR / "cmd.json"
+    new_seq    = _rec_current_seq() + 1
+    data["seq"] = new_seq
+    cmd_path.write_text(json.dumps(data, ensure_ascii=False))
+
+    # Poll for result (up to RECORD_STEP_RESULT_WAIT_S)
+    result_path = SESSION_REC_DIR / f"result_{new_seq}.json"
+    for _ in range(RECORD_STEP_POLL_ITERATIONS):
+        if result_path.exists():
+            break
+        time.sleep(RECORD_STEP_POLL_INTERVAL_S)
+    else:
+        print(
+            f"❌ 等待结果超时（{RECORD_STEP_RESULT_WAIT_S}s）。action={data.get('action')}",
+            file=sys.stderr,
+        )
+        _append_playwright_cmd_log(
+            {
+                "type": "step",
+                "ts": datetime.now().isoformat(),
+                "seq": new_seq,
+                "command": data,
+                "success": False,
+                "error": f"等待结果超时（{RECORD_STEP_RESULT_WAIT_S}s），未收到 result_{new_seq}.json",
+                "code_block": None,
+            }
+        )
+        return 1
+
+    result = json.loads(result_path.read_text())
+    action = data.get("action", "")
+
+    if not result.get("success"):
+        print(f"❌ 操作失败：{result.get('error', '未知错误')}")
+        if result.get("screenshot"):
+            print(f"   截图（供调试）：{result['screenshot']}")
+        # Still print snapshot so LLM can retry with correct selector
+    else:
+        icon = "🔍" if action == "snapshot" else "✅"
+        print(f"{icon} [{action}] 执行成功")
+
+    if result.get("screenshot"):
+        print(f"   📸 截图：{result['screenshot']}")
+    if result.get("url"):
+        print(f"   🔗 URL：{result['url']}")
+
+    snap = result.get("snapshot", [])
+    if snap:
+        print(f"   📋 页面可交互元素（{len(snap)} 个，可用作下一步 target）：")
+        for el in snap[:30]:
+            sel_s  = el.get("sel") or f"[tag={el.get('tag')}，无选择器]"
+            ph_s   = f" [placeholder={el['ph']}]" if el.get("ph") else ""
+            txt_s  = f"  「{el['text'][:45]}」" if el.get("text") else ""
+            print(f"     {sel_s}{ph_s}{txt_s}")
+
+    sections = result.get("sections", [])
+    if sections:
+        print(f"   🗂️  页面内容区块（可用于范围限定选择器，如 [data-testid=X] h3）：")
+        for sec in sections[:10]:
+            h = f"  ← 含标题「{sec['heading']}」" if sec.get("heading") else ""
+            print(f"     {sec['sel']}{h}")
+
+    # dom_inspect: show child element structure
+    inspect_children = result.get("_inspect_children", [])
+    if inspect_children:
+        print(f"\n   🔬 dom_inspect 子元素结构（共 {len(inspect_children)} 个）：")
+        print(f"   {'tag':<10} {'选择器':<40} {'文本预览'}")
+        print(f"   {'-'*8:<10} {'-'*38:<40} {'-'*20}")
+        for c in inspect_children[:30]:
+            sel_h = (
+                f"#{c['id']}" if c.get("id")
+                else f"[data-testid=\"{c['testid']}\"]" if c.get("testid")
+                else f"[aria-label=\"{c['aria']}\"]" if c.get("aria")
+                else f".{c['cls'].split()[0]}" if c.get("cls")
+                else c.get("tag", "?")
+            )
+            print(f"   {c.get('tag','?'):<10} {sel_h:<40} 「{(c.get('text') or '')[:35]}」")
+        print()
+        print("   💡 提示：找到含新闻标题的 tag/sel，组合成 'a h3'、'li .clamp2' 等选择器")
+
+    _append_playwright_cmd_log(
+        {
+            "type": "step",
+            "ts": datetime.now().isoformat(),
+            "seq": new_seq,
+            "command": data,
+            "success": result.get("success"),
+            "error": result.get("error"),
+            "code_block": result.get("code_block"),
+            "url": result.get("url"),
+            "screenshot": result.get("screenshot"),
+        }
+    )
+
+    return 0 if result.get("success") else 1
+
+
+def cmd_record_status() -> int:
+    """Show recorder session status."""
+    if not SESSION_REC_DIR.exists():
+        print("ℹ️  无活跃 Recorder 会话。")
+        return 0
+
+    task_name = "未知"
+    task_path = SESSION_REC_DIR / "task.json"
+    if task_path.exists():
+        try:
+            task_name = json.loads(task_path.read_text()).get("task", "未知")
+        except Exception:
+            pass
+
+    pid_path   = SESSION_REC_DIR / "server.pid"
+    is_running = pid_path.exists()
+    print(f"{'🟢 运行中' if is_running else '🔴 未运行'}  任务：「{task_name}」")
+
+    log_path = SESSION_REC_DIR / "script_log.py"
+    if log_path.exists():
+        content     = log_path.read_text()
+        step_count  = content.count("# ── 步骤")
+        print(f"📋 已录制步骤：{step_count}")
+
+    shots_dir = SESSION_REC_DIR / "screenshots"
+    if shots_dir.exists():
+        shots = list(shots_dir.glob("*.png"))
+        print(f"📸 截图数量：{len(shots)}")
+        if shots:
+            latest = max(shots, key=lambda p: p.stat().st_mtime)
+            print(f"   最新截图：{latest.name}")
+
+    if PLAYWRIGHT_CMD_LOG.exists():
+        with open(PLAYWRIGHT_CMD_LOG, encoding="utf-8") as lf:
+            n = sum(1 for _ in lf)
+        print(f"📝 Playwright 指令日志：{PLAYWRIGHT_CMD_LOG}（约 {n} 行）")
+
+    return 0
+
+
+def cmd_record_end(abort: bool = False) -> int:
+    """Shutdown recorder server and compile RPA script (or abort)."""
+    if abort:
+        if (SESSION_REC_DIR / "server.pid").exists():
+            _rec_send_shutdown()
+        if SESSION_REC_DIR.exists():
+            shutil.rmtree(SESSION_REC_DIR)
+        print("🗑️  录制已放弃，Recorder 已关闭。")
+        return 0
+
+    pid_path  = SESSION_REC_DIR / "server.pid"
+    done_path = SESSION_REC_DIR / "done"
+    task_path = SESSION_REC_DIR / "task.json"
+
+    if not pid_path.exists() and not done_path.exists():
+        print("❌ Recorder 未在运行。请先执行 record-start <task>。", file=sys.stderr)
+        return 1
+
+    if not task_path.exists():
+        print("❌ 找不到任务信息（task.json）。", file=sys.stderr)
+        return 1
+
+    task_name = json.loads(task_path.read_text()).get("task", "task")
+
+    # Send shutdown if server still running
+    if pid_path.exists():
+        _rec_send_shutdown()
+
+    # Wait for done marker (up to 15 s)
+    for _ in range(75):
+        if done_path.exists():
+            break
+        time.sleep(0.2)
+
+    log_path = SESSION_REC_DIR / "script_log.py"
+    if not log_path.exists():
+        print("❌ Recorder 未生成脚本（script_log.py 不存在）。", file=sys.stderr)
+        return 1
+
+    script      = log_path.read_text(encoding="utf-8")
+    step_count  = script.count("# ── 步骤")
+
+    if step_count == 0:
+        print("⚠️  警告：录制到 0 个步骤，生成空壳脚本。", file=sys.stderr)
+
+    filename    = _slugify(task_name)
+    RPA_DIR.mkdir(exist_ok=True)
+    output_path = RPA_DIR / f"{filename}.py"
+    output_path.write_text(script, encoding="utf-8")
+
+    archive_log = RPA_DIR / f"{filename}_playwright_commands.jsonl"
+    if PLAYWRIGHT_CMD_LOG.exists():
+        _append_playwright_cmd_log(
+            {
+                "type": "session",
+                "event": "end",
+                "ts": datetime.now().isoformat(),
+                "task": task_name,
+                "steps_recorded": step_count,
+                "script_path": str(output_path),
+                "archived_log": str(archive_log),
+            }
+        )
+        shutil.copy2(PLAYWRIGHT_CMD_LOG, archive_log)
+
+    registry = load_registry()
+    registry[task_name] = f"{filename}.py"
+    save_registry(registry)
+
+    print(f"✨ RPA 脚本生成成功！")
+    print(f"📄 文件：{output_path}")
+    print(f"📋 共录制 {step_count} 个步骤")
+    if archive_log.exists():
+        print(f"📝 指令日志（副本）：{archive_log}")
+    print(f"📸 截图目录：{SESSION_REC_DIR / 'screenshots'}")
+    print(f"\n运行方式：python3 {output_path}")
+    print(f'下次直接说"运行：{task_name}"即可重放。')
+    return 0
+
+
+# ── Playwright 脚本生成 ───────────────────────────────────────
+
+def _slugify(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r"[^\w\s-]", "", text)
+    text = re.sub(r"[\s_-]+", "_", text)
+    text = re.sub(r"^_+|_+$", "", text)
+    return text or "task"
+
+
+def _is_css_selector(s: str) -> bool:
+    """Return True if the string looks like a CSS selector rather than a human label."""
+    return bool(s) and (
+        s.startswith(("#", ".", "[", "input", "button", "a", "select", "textarea"))
+        or "=" in s or ">" in s or ":" in s
+    )
+
+
+def _build_step(action: dict) -> str:
+    step = action["step"]
+    category = action.get("category", "Web")
+    act = action.get("action", "")
+    target = action.get("target", "")
+    value = action.get("value", "")
+    context = action.get("context", f"步骤 {step}")
+
+    indent = "            "
+    lines = [f"{indent}# 步骤 {step}：{context}", f"{indent}try:"]
+
+    body = []
+    if category == "Web":
+        if act == "navigate":
+            # domcontentloaded fires after HTML is parsed — reliable for heavy SPAs.
+            # "load" waits for all subresources (images/ads) and often times out.
+            body += [
+                f'await page.goto({repr(target)}, wait_until="domcontentloaded")',
+            ]
+        elif act == "click":
+            if _is_css_selector(target):
+                body += [f'await page.locator({repr(target)}).first.click()']
+            else:
+                body += [f'await page.get_by_text({repr(target)}).first.click()']
+        elif act == "fill":
+            # If target looks like a CSS selector, use locator(); otherwise try
+            # multiple semantic strategies so the script survives site redesigns.
+            if _is_css_selector(target):
+                body += [
+                    f'await page.locator({repr(target)}).first.fill({repr(value)})',
+                    'await page.keyboard.press("Enter")',
+                    'await page.wait_for_load_state("domcontentloaded")',
+                ]
+            else:
+                # Fallback: human label / placeholder text — try known Yahoo + generic
+                # search selectors in order (never use input[name=placeholder_text]).
+                body += [
+                    f'_fill_value = {repr(value)}',
+                    '_fill_done = False',
+                    f'_labels = {repr(target)}',
+                    'for _sel in (',
+                    '    "#ybar-sbq",',
+                    '    \'input[name="p"]\',',
+                    '    \'input[aria-label*="Search"]\',',
+                    '    \'input[type="search"]\',',
+                    '):',
+                    '    try:',
+                    '        _loc = page.locator(_sel).first',
+                    '        await _loc.wait_for(state="visible", timeout=8_000)',
+                    '        await _loc.fill(_fill_value)',
+                    '        _fill_done = True',
+                    '        break',
+                    '    except Exception:',
+                    '        continue',
+                    'if not _fill_done:',
+                    '    try:',
+                    '        await page.get_by_placeholder(_labels).first.fill(_fill_value)',
+                    '        _fill_done = True',
+                    '    except Exception:',
+                    '        pass',
+                    'if not _fill_done:',
+                    '    try:',
+                    '        await page.get_by_label(_labels).first.fill(_fill_value)',
+                    '        _fill_done = True',
+                    '    except Exception:',
+                    '        pass',
+                    'if not _fill_done:',
+                    '    raise RuntimeError('
+                    '"无法定位搜索框：请重新录制并在 target 中填写真实 CSS 选择器（如 input#ybar-sbq）")',
+                    'await page.keyboard.press("Enter")',
+                    'await page.wait_for_load_state("domcontentloaded")',
+                ]
+        elif act == "select_option":
+            body += [
+                f'await page.locator({repr(target)}).first.select_option({repr(value)})',
+                'await page.wait_for_load_state("domcontentloaded")',
+                'await page.wait_for_timeout(800)',
+            ]
+        elif act == "select":
+            body += [f'await page.get_by_label({repr(target)}).select_option({repr(value)})']
+        elif act == "screenshot":
+            body += [
+                f'await page.screenshot(path="step_{step}_capture.png", full_page=True)',
+                f'print("截图已保存：step_{step}_capture.png")',
+            ]
+        else:
+            body += [f'# TODO: 实现 {act} 操作，目标：{target}', 'pass']
+
+    elif category == "File":
+        if act == "write":
+            fname = Path(target).name if target else "output.txt"
+            body += [
+                f'out = CONFIG["output_dir"] / {repr(fname)}',
+                f'out.write_text({repr(value)}, encoding="utf-8")',
+                f'print(f"已写入：{{out}}")',
+            ]
+        elif act == "read":
+            body += [
+                f'content = Path({repr(target)}).read_text(encoding="utf-8")',
+                f'print(f"已读取：{{len(content)}} 字符")',
+            ]
+        else:
+            body += [f'# TODO: 实现文件 {act} 操作', 'pass']
+
+    else:
+        body += [f'# TODO: 实现 {category}/{act}', 'pass']
+
+    for b in body:
+        lines.append(f"{indent}    {b}")
+
+    lines += [
+        f"{indent}except Exception:",
+        f'{indent}    await page.screenshot(path="step_{step}_error.png")',
+        f"{indent}    raise",
+    ]
+    return "\n".join(lines)
+
+
+def _build_playwright_script(task_name: str, buffer: list) -> str:
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    steps = "\n\n".join(_build_step(a) for a in buffer)
+
+    return f'''# pip install playwright && playwright install chromium
+# 任务：{task_name}
+# 生成时间：{ts}
+# 由 OpenClaw RPA 引擎自动生成 — 可脱离 OpenClaw 独立运行
+
+import asyncio
+from pathlib import Path
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
+
+# ── 配置区（修改此处即可适配不同环境）──────────────────────
+CONFIG = {{
+    "output_dir": Path.home() / "Desktop",  # 文件输出目录
+    "headless": False,                       # True = 无头模式
+    "timeout": 60_000,                       # 超时毫秒
+    "slow_mo": 300,                          # 操作间隔 ms，模拟人类速度
+}}
+
+# ── 反爬虫：伪造真实浏览器特征 ────────────────────────────
+_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
+
+
+# ── 主流程 ────────────────────────────────────────────────
+async def run():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=CONFIG["headless"],
+            args=["--no-sandbox", "--disable-blink-features=AutomationControlled"],
+            slow_mo=CONFIG["slow_mo"],
+        )
+        context = await browser.new_context(
+            user_agent=_UA,
+            viewport={{"width": 1440, "height": 900}},
+            locale="en-US",
+            timezone_id="America/New_York",
+            extra_http_headers={{"Accept-Language": "en-US,en;q=0.9"}},
+        )
+        await context.add_init_script(
+            "Object.defineProperty(navigator, 'webdriver', {{get: () => undefined}})"
+        )
+        page = await context.new_page()
+        page.set_default_timeout(CONFIG["timeout"])
+
+        try:
+{steps}
+
+        except PlaywrightTimeout as e:
+            await page.screenshot(path="error_timeout.png")
+            raise RuntimeError(f"操作超时，截图已保存: {{e}}") from e
+        except Exception:
+            await page.screenshot(path="error_unexpected.png")
+            raise
+        finally:
+            await browser.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(run())
+'''
+
+
+# ── 入口 ─────────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="OpenClaw RPA Manager",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    sub = parser.add_subparsers(dest="command", metavar="COMMAND")
+
+    # ── Recorder 模式 ──
+    p_rs = sub.add_parser("record-start",  help="启动 headed Playwright Recorder（有界面真实录制）")
+    p_rs.add_argument("task_name", help="任务名称")
+
+    p_rp = sub.add_parser("record-step",   help="向 Recorder 发送单步操作（含 select_option）")
+    p_rp.add_argument("step_json", help='操作 JSON，如 \'{"action":"snapshot"}\'')
+
+    sub.add_parser("record-status", help="查看 Recorder 运行状态与已录步骤")
+
+    p_re = sub.add_parser("record-end",    help="结束录制，生成并保存 RPA 脚本")
+    p_re.add_argument("--abort", action="store_true", help="放弃录制，清理会话")
+
+    # ── 计划管理（多步指令防超时）──
+    p_ps = sub.add_parser("plan-set",    help="设置多步执行计划（防 LLM 超时）")
+    p_ps.add_argument("steps_json", help='步骤 JSON 数组，如 \'["步骤1描述", "步骤2描述"]\'')
+
+    sub.add_parser("plan-next",   help="推进计划到下一步")
+    sub.add_parser("plan-status", help="查看计划当前进度")
+
+    # ── Legacy 模式 ──
+    p_init = sub.add_parser("init",     help="[legacy] 初始化录制会话")
+    p_init.add_argument("task_name", help="任务名称")
+
+    p_add = sub.add_parser("add",       help="[legacy] 追加 Action 到 Buffer（须带 --proof）")
+    p_add.add_argument("--proof", required=True, metavar="PATH",
+                       help="本步实操成功后的证明文件（截图 PNG/JPG 或输出文件），须 ≥64 字节")
+    p_add.add_argument("action_json", help='Action JSON，如 \'{"category":"Web","action":"navigate",...}\'')
+
+    sub.add_parser("status",   help="[legacy] 查看当前录制状态与 Buffer")
+    sub.add_parser("generate", help="[legacy] 从 Buffer 生成 Playwright 脚本")
+
+    # ── 通用命令 ──
+    p_run = sub.add_parser("run",  help="运行已保存的任务")
+    p_run.add_argument("task_name", help="任务名称")
+
+    sub.add_parser("list",  help="列出所有已录制任务")
+    sub.add_parser("reset", help="[legacy] 清空 Buffer 并放弃录制")
+
+    sub.add_parser(
+        "env-check",
+        help="检查 Python / playwright 包 / Chromium 是否可用（录制与运行前自检）",
+    )
+
+    args = parser.parse_args()
+    dispatch = {
+        # Recorder 模式
+        "record-start":  lambda: cmd_record_start(args.task_name),
+        "record-step":   lambda: cmd_record_step(args.step_json),
+        "record-status": cmd_record_status,
+        "record-end":    lambda: cmd_record_end(getattr(args, "abort", False)),
+        # 计划管理
+        "plan-set":      lambda: cmd_plan_set(args.steps_json),
+        "plan-next":     cmd_plan_next,
+        "plan-status":   cmd_plan_status,
+        # Legacy 模式
+        "init":          lambda: cmd_init(args.task_name),
+        "add":           lambda: cmd_add(args.action_json, args.proof),
+        "status":        cmd_status,
+        "generate":      cmd_generate,
+        # 通用
+        "run":           lambda: cmd_run(args.task_name),
+        "list":          cmd_list,
+        "reset":         cmd_reset,
+        "env-check":     lambda: envcheck.print_report(),
+    }
+
+    if args.command in dispatch:
+        sys.exit(dispatch[args.command]())
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
