@@ -31,7 +31,10 @@ Screen recording of a typical chat with **OpenClaw-bot** on Feishu/Lark:
 - **`#rpa-run:onlineShoppingV1`** — run a saved script from a new chat;
 - A line like **「One minute later run `#rpa-run:onlineShoppingV1`」** — schedule or remind to run later via OpenClaw + IM (exact behavior depends on your setup; execution still goes through **`rpa_manager.py run`**).
 
-https://github.com/laziobird/openclaw-rpa/raw/main/openclaw-rpa-lark-demo.mp4
+
+https://github.com/user-attachments/assets/08ccbdc6-508b-457a-87d6-49ac77e9a89e
+
+
 
 Full protocol: [**SKILL.en-US.md**](SKILL.en-US.md) (ONBOARDING, RECORDING). **See what recorded RPAs exist:** **`#rpa-list`**. **Run one:** `#rpa-run:{task}` (new chat) or `run:{task}` / `python3 rpa_manager.py run <name>` (same chat).
 
