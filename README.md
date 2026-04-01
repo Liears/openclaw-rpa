@@ -9,14 +9,12 @@ English | **[中文](README.zh-CN.md)**
 **Sauce Demo** ([saucedemo.com](https://www.saucedemo.com)): **sign in → sort by price → add two most expensive → sign out**.  
 Shows the full flow from trigger through recording to a generated script.
 
-https://github.com/laziobird/openclaw-rpa/raw/main/saucedemo-readme.mp4
+https://github.com/user-attachments/assets/965fbecc-a0fc-4795-9f63-a5ef126f97f8
 
-**Bilibili (Sauce, HD):** [BV1YfXrBBE9u](https://www.bilibili.com/video/BV1YfXrBBE9u/)
-
-**Sauce recording (`saucedemo-readme.mp4`) — steps in the video**
+**Recording (`saucedemo-readme.mp4`) — steps in the video**
 
 1. Send **`#rpa`** / **`#RPA`** / **`#automation robot`** — see [**SKILL.md**](SKILL.md) and [**SKILL.en-US.md** — Trigger detection](SKILL.en-US.md#trigger-detection).
-2. Task name examples: **`电商网站购物`**, or match an existing script like **`电商网站购物V10`** (see **`registry.json`**).
+2. Task name examples: match an existing script like **`onlineShoppingV1`** (see **`registry.json`**).
 
 **Task prompt (Sauce segment)**
 
@@ -30,8 +28,8 @@ https://github.com/laziobird/openclaw-rpa/raw/main/saucedemo-readme.mp4
 Screen recording of a typical chat with **OpenClaw-bot** on Feishu/Lark:
 
 - **`#rpa-list`** — list registered RPA tasks you can run;
-- **`#rpa-run:电商网站购物V10`** — run a saved script from a new chat;
-- A line like **「One minute later run `#rpa-run:电商网站购物V10`」** — schedule or remind to run later via OpenClaw + IM (exact behavior depends on your setup; execution still goes through **`rpa_manager.py run`**).
+- **`#rpa-run:onlineShoppingV1`** — run a saved script from a new chat;
+- A line like **「One minute later run `#rpa-run:onlineShoppingV1`」** — schedule or remind to run later via OpenClaw + IM (exact behavior depends on your setup; execution still goes through **`rpa_manager.py run`**).
 
 https://github.com/laziobird/openclaw-rpa/raw/main/openclaw-rpa-lark-demo.mp4
 
