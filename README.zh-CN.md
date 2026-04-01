@@ -4,14 +4,15 @@
 
 ## 演示视频
 
-
 ### Sauce 电商购物网站 浏览器录屏
 
-**Sauce Demo**（[saucedemo.com](https://www.saucedemo.com)）录屏：**登录 → 按价格排序 → 加购最贵两件 → 登出**。展示从触发到录制、生成脚本的一条完整流程。
+**Sauce **（[saucedemo.com](https://www.saucedemo.com)）录屏：**登录 → 按价格排序 → 加购最贵两件 → 登出**。展示从触发到录制、生成脚本的一条完整流程。
+=======
+| 观看方式 | 链接 |
+|:--|:--|
+| **哔哩哔哩（推荐，高清）** | **[▶ 点击播放](https://www.bilibili.com/video/BV1YfXrBBE9u/)**（BV1YfXrBBE9u） |
 
 https://github.com/user-attachments/assets/d368a81e-425a-4830-bc29-fe11e89eda92
-
-**哔哩哔哩（Sauce 高清）**：[BV1YfXrBBE9u](https://www.bilibili.com/video/BV1YfXrBBE9u/)
 
 **对话步骤**
 

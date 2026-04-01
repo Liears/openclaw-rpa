@@ -4,7 +4,7 @@ English | **[中文](README.zh-CN.md)**
 
 ## Demo video
 
-### Sauce Demo (browser recording)
+### Sauce (Online Shopping WebSite) Demo (browser recording)
 
 **Sauce Demo** ([saucedemo.com](https://www.saucedemo.com)): **sign in → sort by price → add two most expensive → sign out**.  
 Shows the full flow from trigger through recording to a generated script.
