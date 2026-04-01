@@ -28,3 +28,7 @@ venv/
 
 # Large GIF source; README uses compressed openclaw-rpa-lark-demo.mp4
 /rpa.gif
+
+# Large screen recording source; use compressed shoppingWebSite.mp4 in repo/docs
+/shoppingWebSite.mov
+/rpa-list-all.mov

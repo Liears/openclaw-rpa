@@ -1,6 +1,6 @@
 # pip install playwright && playwright install chromium
-# 任务：电商网站购物V10
-# 录制时间：2026-03-31 11:20:50
+# 任务：onlineShoppingV1
+# 录制时间：2026-04-01 11:25:24
 # 由 OpenClaw RPA Recorder（headed 真实录制）生成 — 可脱离 OpenClaw 独立运行
 
 import asyncio
@@ -23,6 +23,21 @@ _UA = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/124.0.0.0 Safari/537.36"
 )
+
+def _format_extract_section(field_label: str, lines: list[str]) -> str:
+    """Format extracted DOM text: show field name, separator line, then body."""
+    name = (field_label or "").strip() or "extract"
+    title = f"【字段：{name}】"
+    if not lines:
+        body = "(no text matched)\n"
+    elif len(lines) == 1:
+        body = lines[0].strip() + "\n"
+    else:
+        parts = [f"{i + 1}. {s.strip()}" for i, s in enumerate(lines)]
+        body = "\n\n".join(parts) + "\n"
+    sep = "─" * 32
+    return f"{title}\n{sep}\n{body}\n"
+
 
 _EXTRACT_JS = (
     "([s,n])=>{return Array.from(document.querySelectorAll(s))"
@@ -60,7 +75,7 @@ async def run():
         page.set_default_timeout(CONFIG["timeout"])
 
         try:
-            # ── 步骤 1：访问网站 https://www.saucedemo.com
+            # ── 步骤 1：Access www.saucedemo.com
             try:
                 await page.goto('https://www.saucedemo.com', wait_until="domcontentloaded")
                 await page.wait_for_timeout(CONFIG["spa_settle_ms"])
@@ -68,21 +83,21 @@ async def run():
                 await page.screenshot(path="step_1_error.png")
                 raise
 
-            # ── 步骤 2：填写账号 standard_user
+            # ── 步骤 2：Enter username
             try:
                 await page.locator('#user-name').first.fill('standard_user')
             except Exception:
                 await page.screenshot(path="step_2_error.png")
                 raise
 
-            # ── 步骤 3：填写密码 secret_sauce
+            # ── 步骤 3：Enter password
             try:
                 await page.locator('#password').first.fill('secret_sauce')
             except Exception:
                 await page.screenshot(path="step_3_error.png")
                 raise
 
-            # ── 步骤 4：点击登录按钮
+            # ── 步骤 4：Click login
             try:
                 await page.locator('#login-button').first.click()
                 await page.wait_for_load_state("domcontentloaded")
@@ -91,16 +106,16 @@ async def run():
                 await page.screenshot(path="step_4_error.png")
                 raise
 
-            # ── 步骤 5：按价格从高到低排序
+            # ── 步骤 5：Sort by price high to low
             try:
-                await page.locator('[data-test="product-sort-container"]').first.select_option('hilo')
+                await page.locator('#header_container div div span select').first.select_option('hilo')
                 await page.wait_for_load_state("domcontentloaded")
                 await page.wait_for_timeout(800)
             except Exception:
                 await page.screenshot(path="step_5_error.png")
                 raise
 
-            # ── 步骤 6：添加价格最高的第一件商品到购物车
+            # ── 步骤 6：Add highest priced item to cart
             try:
                 await page.locator('#add-to-cart-sauce-labs-fleece-jacket').first.click()
                 await page.wait_for_load_state("domcontentloaded")
@@ -109,7 +124,7 @@ async def run():
                 await page.screenshot(path="step_6_error.png")
                 raise
 
-            # ── 步骤 7：添加价格最高的第二件商品到购物车
+            # ── 步骤 7：Add second highest priced item to cart
             try:
                 await page.locator('#add-to-cart-sauce-labs-backpack').first.click()
                 await page.wait_for_load_state("domcontentloaded")
@@ -118,7 +133,7 @@ async def run():
                 await page.screenshot(path="step_7_error.png")
                 raise
 
-            # ── 步骤 8：打开左侧菜单
+            # ── 步骤 8：Open side menu
             try:
                 await page.locator('#react-burger-menu-btn').first.click()
                 await page.wait_for_load_state("domcontentloaded")
@@ -127,7 +142,7 @@ async def run():
                 await page.screenshot(path="step_8_error.png")
                 raise
 
-            # ── 步骤 9：点击退出登录
+            # ── 步骤 9：Click logout
             try:
                 await page.locator('#logout_sidebar_link').first.click()
                 await page.wait_for_load_state("domcontentloaded")
