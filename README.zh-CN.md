@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/d368a81e-425a-4830-bc29-fe11e89eda92
 - **`#rpa-run:电商网站购物V10`**：在新对话中执行已录制的脚本；
 - **「一分钟后运行 #rpa-run:电商网站购物V10」** 等自然语言：在 OpenClaw + IM 侧预约或提醒稍后执行（具体以你的 OpenClaw 与机器人配置为准；脚本本身仍由 `rpa_manager.py run` 执行）。
 
-https://github.com/laziobird/openclaw-rpa/raw/main/openclaw-rpa-lark-demo.mp4
+https://github.com/user-attachments/assets/514e2d74-f42a-4243-8d49-52931fe6c22e
 
 
 ---
