@@ -64,6 +64,33 @@ In chat, prefer **`#rpa-list`** → **`#rpa-run:your-task-name`** so names match
 | **Browser then files** | Same flow, plus **`extract_text`** when asked. |
 | **Files only in script** | After **`record-end`**, add folder cleanup—**no URL** for that block. |
 
+## Recommended sites for getting started
+
+**Good fits — predictable structure, works well out of the box:**
+
+| Category | Examples |
+|----------|---------|
+| **Finance / data** | Yahoo Finance (quotes, headlines), Google Finance, investing.com |
+| **E-commerce** | Sauce Demo (`saucedemo.com`), AliExpress product pages, eBay search results |
+| **News / media** | BBC News, Reuters, Hacker News, Reddit (listing pages) |
+| **Reference** | Wikipedia, GitHub (public repo pages, issues list) |
+| **Job boards** | LinkedIn Jobs (public search), Indeed results page |
+| **Travel / weather** | weather.com, Google Flights results (read-only) |
+| **Demo / test sites** | `the-internet.herokuapp.com`, `demoqa.com`, `automationpractice.pl` |
+
+**Not recommended — likely to break or require manual workarounds:**
+
+| Situation | Why |
+|-----------|-----|
+| **Highly dynamic SPAs** (heavy client-side routing, frequent DOM mutations) | Selectors shift between renders; snapshots may miss unrendered content |
+| **CAPTCHA / bot-detection sites** (Google reCAPTCHA, hCaptcha, Cloudflare Turnstile) | Automation will be blocked; human intervention required |
+| **Login-gated flows without saved sessions** | Credentials and 2FA must be handled manually before replay |
+| **Infinite-scroll feeds with no stable IDs** | Progressive probing helps but results are inconsistent |
+
+> **Tip:** when trying a new site, start with a simple `goto` + `snapshot` step to check whether the page structure is readable before building a full flow.
+
+---
+
 ## Troubleshooting: `LLM request timed out` (not the record-step timeout)
 
 If logs show `error=LLM request timed out`, `model=gemini-...`, `provider=google`:
@@ -129,6 +156,9 @@ Common commands:
 • "end recording" → generate the Playwright Python script
 • "abort" → close the browser and discard this session
 • For multi-step plans, to go on you may send: **continue**, **1**, or **next** (same as "ok", "y", "go")
+
+Good sites to try: Yahoo Finance, BBC News, Hacker News, GitHub public pages, Sauce Demo (saucedemo.com), Wikipedia.
+Not recommended: sites with CAPTCHAs (reCAPTCHA / hCaptcha / Cloudflare), or heavily dynamic SPAs where the DOM changes between every render. May be supported in the future.
 
 What is the first task name you want to record?
 ```

@@ -44,6 +44,37 @@ metadata:
 
 Full protocol, state machine, `record-step` JSON, **progressive probing**, and **selector strength** (composite CSS — container + tag / attributes / `:has()`; avoid bare `h3`) live in the locale file below.
 
+## Output
+
+Generated file is **ordinary Python** (`rpa/*.py`) — runs standalone with `python3`, editable, no OpenClaw dependency at replay time.
+
+## Scope
+
+**Browser** — clicks, fill, select, scroll, wait, screenshot, text extraction.  
+**Files (optional)** — `extract_text` writes to disk; patch `rpa/*.py` for folder / file ops after recording.  
+**Out of scope** — large ETL, databases, heavy OS automation.
+
+## Recommended sites
+
+**Good fits** — predictable structure, works well out of the box:
+
+| Category | Examples |
+|----------|---------|
+| Finance / data | Yahoo Finance, investing.com |
+| E-commerce | Sauce Demo (`saucedemo.com`), AliExpress, eBay |
+| News / media | BBC News, Reuters, Hacker News, Reddit listing pages |
+| Reference | Wikipedia, GitHub public repo / issues pages |
+
+**Not recommended** — likely to break or require manual intervention:
+
+| Situation | Why |
+|-----------|-----|
+| Highly dynamic SPAs (heavy client-side routing) | Selectors shift between renders; snapshots may miss content |
+| CAPTCHA / bot-detection (reCAPTCHA, hCaptcha, Cloudflare) | Automation blocked; human verification required. May be supported in the future. |
+| Login-gated flows without saved sessions | Credentials / 2FA must be handled manually before replay |
+
+> **Tip:** on a new site, start with `goto` + `snapshot` to confirm the page structure is readable before building a full flow.
+
 ## Mandatory: load the correct instruction file
 
 1. **Read** `config.json` in this skill directory. If it does not exist, read **`config.example.json`** (same shape; default `locale` is **`en-US`**).

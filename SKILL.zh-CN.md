@@ -55,6 +55,33 @@ python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py run "任务名"
 | **浏览器 + 文件** | 同上，必要时 **`extract_text`** 落盘。 |
 | **脚本内文件** | 录完后只加整理下载目录、改名等——可与网页无关。 |
 
+## 推荐入门网站
+
+**适合录制——结构稳定、开箱即用：**
+
+| 类别 | 代表网站 |
+|------|---------|
+| **财经 / 数据** | Yahoo 财经（行情、新闻）、Google 财经、investing.com |
+| **电商** | Sauce Demo（`saucedemo.com`）、AliExpress 商品页、eBay 搜索结果 |
+| **新闻 / 媒体** | BBC News、Reuters、Hacker News、Reddit（列表页） |
+| **参考资料** | Wikipedia、GitHub（公开仓库页、Issues 列表） |
+| **招聘** | LinkedIn Jobs（公开搜索）、Indeed 结果页 |
+| **出行 / 天气** | weather.com、Google Flights 结果页（只读） |
+| **练习 / 测试站** | `the-internet.herokuapp.com`、`demoqa.com`、`automationpractice.pl` |
+
+**不建议使用——容易失败或需要人工干预：**
+
+| 场景 | 原因 |
+|------|------|
+| **高度动态的 SPA**（重度客户端路由、DOM 频繁变动） | 选择器在每次渲染间可能发生偏移；snapshot 可能遗漏未渲染内容 |
+| **含验证码 / 反爬机制**（reCAPTCHA、hCaptcha、Cloudflare Turnstile） | 自动化会被拦截，须人工通过验证才能继续 |
+| **登录后才可访问且无保存会话的流程** | 需手动处理账号密码与二次验证，回放前须先登录 |
+| **无稳定 ID 的无限下拉流** | 渐进式探测有帮助，但结果可能不稳定 |
+
+> **小贴士：** 尝试新网站时，建议先只做 `goto` + `snapshot`，确认页面结构可读后，再规划完整流程。
+
+---
+
 ## 故障排查：`LLM request timed out`（与录制超时不同）
 
 日志里若出现 `error=LLM request timed out`、`model=gemini-...`、`provider=google`：
@@ -118,6 +145,9 @@ IDLE ──"#rpa-list"──► LIST ──► IDLE
 • 输入"#结束录制" → 生成可独立运行的 Playwright 脚本
 • 输入"#放弃"     → 关闭浏览器，清空本次录制
 • 多步任务拆成计划后，要进入下一步时可只发:**#继续**、**1** 或 **next**（与「#好」「#下一步」「ok」一样有效）
+
+推荐网站：Yahoo 财经、BBC News、Hacker News、GitHub 公开页、Sauce Demo（saucedemo.com）、Wikipedia。
+不建议：含验证码的网站（reCAPTCHA / hCaptcha / Cloudflare），或 DOM 每次渲染都会变化的高度动态 SPA。以后未来可能支持
 
 请告诉我，你要录制的第一个任务名称是什么？
 ```
