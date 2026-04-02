@@ -22,6 +22,8 @@ metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 1. **Saves compute and money** — Letting a **large model** operate the browser **every** time can cost **on the order of single-digit to tens of US dollars** per heavy session (tokens, tools, long context). After you **record once**, repeat runs **do not invoke the model**—cost is essentially **local script execution**, and runs are **much faster** than step-by-step LLM reasoning.
 2. **Verify the flow once, then run the same steps every time** — During recording you **prove** the task works; replay **executes the saved steps** deterministically. You avoid asking the AI to improvise on each run, which **reduces inconsistency** and **hallucination-driven** mistakes.
 
+**Recommended LLM:** Minimax 2.7 · Google Gemini Pro 3.0 and above · Claude Sonnet 4.6
+
 Output is **ordinary Python**; after **`record-end`** you may still patch helpers (`pathlib` / `shutil` / `open()`, or **`extract_text`** during recording)—browser-only, file-only, or both.
 
 ## When to use

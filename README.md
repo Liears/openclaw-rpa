@@ -64,6 +64,7 @@ Full protocol: [**SKILL.en-US.md**](SKILL.en-US.md) (ONBOARDING, RECORDING). **S
 | | |
 |:---|:---|
 | **Needs** | Python **3.8+**, network for `pip` / Playwright browsers |
+| **Recommended LLM** | Minimax 2.7 · Google Gemini Pro 3.0 and above · Claude Sonnet 4.6 |
 | **License** | [Apache 2.0](LICENSE.md) |
 
 ---
