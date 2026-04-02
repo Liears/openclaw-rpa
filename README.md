@@ -2,9 +2,9 @@
 
 English | **[中文](README.zh-CN.md)**
 
-## Demo video
+## Case video
 
-### Sauce (Online Shopping WebSite) Demo (browser recording)
+### 1. Sauce (Online Shopping WebSite) Demo (browser recording)
 
 **Sauce Demo** ([saucedemo.com](https://www.saucedemo.com)): **sign in → sort by price → add two most expensive → sign out**.  
 Shows the full flow from trigger through recording to a generated script.
@@ -25,13 +25,11 @@ https://github.com/user-attachments/assets/965fbecc-a0fc-4795-9f63-a5ef126f97f8
 
 <a id="yahoo-finance-nvda-demo"></a>
 
-### Yahoo Finance (NVDA news) — browser recording
+### 2. Yahoo Finance (NVDA news) — browser recording
 
 **Yahoo Finance** ([finance.yahoo.com](https://finance.yahoo.com)): **search a symbol → open the quote page → switch to the News tab → capture the top headlines to a text file on the Desktop**. This case shows the same end-to-end path as the Sauce demo—trigger, record, synthesize a Playwright script—for a finance/news workflow.
 
-**Video (GitHub playback):** *URL reserved — after you upload the screen recording (e.g. to a GitHub issue comment or release asset), replace the link below with the `https://github.com/user-attachments/assets/…` playback URL.*
-
-https://github.com/user-attachments/assets/00000000-0000-0000-0000-000000000000
+https://github.com/user-attachments/assets/8da98e97-415c-4a60-b412-9a30ea87551a
 
 **Recording — steps in the video**
 
@@ -44,7 +42,7 @@ https://github.com/user-attachments/assets/00000000-0000-0000-0000-000000000000
 2. In the row of tabs under the stock price (same row as **Summary**), click **News** for this symbol—the tab next to **Summary**. Wait until the news list has loaded.
 3. Save the **top 5** news headlines (**title text only**) to **`YahooNews.txt`** on the **Desktop**.
 
-### OpenClaw + Feishu/Lark: `#rpa-list`, `#rpa-run`, and scheduled run
+### 3. OpenClaw + Feishu/Lark: `#rpa-list`, `#rpa-run`, and scheduled run
 
 Screen recording of a typical chat with **OpenClaw-bot** on Feishu/Lark:
 
