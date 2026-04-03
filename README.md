@@ -164,6 +164,22 @@ More notes: **`examples/README.md`**.
 
 ---
 
+## Roadmap (planned)
+
+The following capabilities are **not shipped yet**; they describe where the project is headed.
+
+| Area | Description |
+|:-----|:------------|
+| **API-aware recording** | Beyond browser DOM actions, bring **HTTP/API calls** and third-party automation hooks into the same **record → synthesize → replay** pipeline, so you can wire up more external services. |
+| **Configurable sign-in / session reuse** | Use **credentials or a persistent browser context** (where appropriate) so scripts can **reuse an authenticated session** instead of walking through a long login flow on every run. Recording can focus on **what happens after you’re logged in**. |
+
+**Caveats**
+
+- **Compliance:** Follow each site’s terms of service and policies. This repo does not endorse evading safeguards or scraping where it isn’t allowed.
+- **High-friction sites (e.g. LinkedIn):** Even with auto sign-in or session reuse, you may still hit **2FA, device checks, CAPTCHAs, and risk blocks** that require **human steps**. The goal is fewer redundant login flows **when your environment can keep a stable session**—not a promise of **fully unattended** operation on every platform.
+
+---
+
 <p align="center">
   <sub>Apache License 2.0 · Copyright © 2026 openclaw-rpa contributors</sub>
 </p>
