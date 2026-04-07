@@ -1,4 +1,4 @@
-# 案例：应付对账（仅拉系统数据 + 本地 Excel + 输出 Word 表）
+# 案例：财务对账（API财务系统数据 + 本地财务 Excel + 输出 Word 对账表）
 
 > **简化版**：云端 API **只负责「拉待对账数据」**；会计在**本机 Excel** 里完成与发票明细的核对；最终把**对账结果**存成一份 **Word（`.docx`）**，正文里用**表格**展示清单（便于打印、签字或邮件发出）。  
 > 录制建议：`**#rpa-api**` 或 `**#自动化机器人**`，能力码选 **F**（Excel + Word，无网页）或 **G**（若还要开网页）；步骤含 **`api_call`** + **`excel_write`** + **`word_write`**（`table` 参数直接生成表格，无需录完后手补）。
@@ -9,16 +9,11 @@
 
 完整录制演示（全流程：触发 → 录制 API + Excel + Word → 生成脚本 → 回放）：
 
-<!-- TODO: 上传视频后替换下方占位 URL -->
-<!-- GitHub Releases / Assets 上传后格式示例：
-https://github.com/user-attachments/assets/<VIDEO_ASSET_ID>
--->
 
-> **待插入：** 将 `对账-all.mp4` 上传到 GitHub（Release Assets 或 issue 附件），把生成的资源 URL 粘贴到此处，格式如下：
->
-> ```
-> https://github.com/user-attachments/assets/<上传后得到的 ID>
-> ```
+
+https://github.com/user-attachments/assets/13cfda68-5a67-4efa-aa6d-c1ecc501a30e
+
+
 
 **录屏内容说明（共 4 步）**
 
@@ -144,6 +139,12 @@ GET https://0a34723da37946b7add0b4581c37ada2_oas.api.mockbin.io/ap/reconciliatio
 | **`excel_write`** | 写 **系统侧 / 发票侧 / 匹配结果** 各 sheet；发票若从另一文件读，多在 `record-end` 后补 `openpyxl.load_workbook`。 |
 | **Word 表格** | 录制器 **`word_write`** 适合段落标题；**多列表格**建议在最终 `rpa/*.py` 中使用 `docx.Document` + `doc.add_table(rows=…, cols=…)` 填单元格，与 **SKILL** 中「末尾追加 / 小补全」规则一致。 |
 | **回放** | `#rpa-run:任务名` |
+
+
+
+https://github.com/user-attachments/assets/61057986-edb6-47ef-81e1-72122f33f081
+
+
 
 ---
 
