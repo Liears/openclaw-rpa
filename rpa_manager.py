@@ -1,26 +1,39 @@
 #!/usr/bin/env python3
 """
 OpenClaw RPA Manager — 状态持久化 & 脚本生成 CLI
+OpenClaw RPA Manager — Session persistence & script generation CLI
 
-【Recorder 模式 — 推荐，有界面真实录制】
-  python3 rpa_manager.py record-start <task>   # 启动 headed Playwright，等待浏览器就绪
-  python3 rpa_manager.py record-step '<json>'  # 执行单步操作（含 select_option 原生下拉框）
-  python3 rpa_manager.py record-status         # 查看 Recorder 运行状态与已录步骤
-  python3 rpa_manager.py record-end            # 关闭浏览器，编译并保存 RPA 脚本
-  python3 rpa_manager.py record-end --abort    # 放弃录制，清理会话
-  # 每步指令与生成代码片段追加写入 recorder_session/playwright_commands.jsonl；
-  # record-end 成功后复制到 rpa/{任务slug}_playwright_commands.jsonl
+【登录会话管理 / Login Session Management（复杂登录 / SMS OTP / CAPTCHA / slider）】
+  python3 rpa_manager.py login-start <url>   # 打开浏览器到登录页，用户手动完成登录 / Open browser to login page; user logs in manually
+  python3 rpa_manager.py login-done          # 导出当前 Cookie 并关闭浏览器 / Export cookies & close browser
+  python3 rpa_manager.py login-list          # 列出所有已保存的登录会话 / List all saved login sessions
+  python3 rpa_manager.py help                # 显示完整指令列表与简单用法 / Show full command reference
+  # Cookie 存储于 ~/.openclaw/rpa/sessions/{domain}/cookies.json（勿提交 git）
+  # Cookies stored at ~/.openclaw/rpa/sessions/{domain}/cookies.json (never commit to git)
+  # 录制/回放时任务描述含 #rpa-autologin <domain|url> 则自动注入
+  # Add #rpa-autologin <domain|url> to task description to auto-inject cookies on record/replay
 
-【Legacy 模式 — 兼容保留，须手动提供截图证明】
+【Recorder 模式 / Recorder Mode — 推荐，有界面真实录制 / Recommended: headed real-browser recording】
+  python3 rpa_manager.py record-start <task> [--profile A]   # 启动 headed Playwright / Start headed Playwright; --profile writes to task.json
+  python3 rpa_manager.py deps-check <A-N>        # 按能力码检查依赖 / Check deps by capability code
+  python3 rpa_manager.py deps-install <A-N>      # 安装缺失依赖 / Install missing deps
+  python3 rpa_manager.py record-step '<json>'    # 执行单步操作 / Execute a single recorded step
+  python3 rpa_manager.py record-status           # 查看 Recorder 状态 / Check recorder status
+  python3 rpa_manager.py record-end              # 结束录制，生成脚本 / End recording, compile script
+  python3 rpa_manager.py record-end --abort      # 放弃录制 / Abort recording
+  # 每步指令与生成代码片段追加写入 recorder_session/playwright_commands.jsonl
+  # Each step appended to recorder_session/playwright_commands.jsonl; copied to rpa/{slug}_playwright_commands.jsonl on end
+
+【Legacy 模式 / Legacy Mode — 兼容保留 / kept for compatibility; requires manual screenshot proof】
   python3 rpa_manager.py init <task_name>
-  python3 rpa_manager.py add --proof <文件> '<json>'
+  python3 rpa_manager.py add --proof <file> '<json>'
   python3 rpa_manager.py generate
 
-【通用命令】
-  python3 rpa_manager.py run <task_name>
-  python3 rpa_manager.py list
-  python3 rpa_manager.py status
-  python3 rpa_manager.py reset
+【通用命令 / General Commands】
+  python3 rpa_manager.py run <task_name>   # 运行已保存的任务 / Run a saved task
+  python3 rpa_manager.py list              # 列出所有任务 / List all tasks
+  python3 rpa_manager.py status            # 查看当前状态 / Show current session status
+  python3 rpa_manager.py reset             # 清空 Buffer / Clear buffer
 """
 
 import argparse
@@ -36,25 +49,60 @@ from typing import Optional
 
 import envcheck
 
+# ── 时间戳日志：所有 print() 自动加前缀 [HH:MM:SS] ──────────────────────────
+# Timestamped logging: prepend [HH:MM:SS] to every print() call
+import builtins as _builtins
+_real_print = _builtins.print
+def _timed_print(*args, **kwargs):  # type: ignore[override]
+    _real_print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]", *args, **kwargs)
+_builtins.print = _timed_print
+# ─────────────────────────────────────────────────────────────────────────────
+
 SKILL_DIR        = Path(__file__).parent
 SESSION_FILE     = SKILL_DIR / "session.json"
 REGISTRY_FILE    = SKILL_DIR / "registry.json"
 RPA_DIR          = SKILL_DIR / "rpa"
 PROOFS_DIR       = SKILL_DIR / "proofs"
-SESSION_REC_DIR  = SKILL_DIR / "recorder_session"  # Recorder 模式专用目录
+SESSION_REC_DIR  = SKILL_DIR / "recorder_session"  # Recorder 模式专用目录 / dedicated dir for Recorder mode
 # 录制时每一步 record-step 追加一行 JSON（含指令与生成的 Playwright 代码片段）
+# Each record-step appends one JSON line (command + generated Playwright code snippet)
 PLAYWRIGHT_CMD_LOG = SESSION_REC_DIR / "playwright_commands.jsonl"
+# 登录会话存储目录（Cookie JSON，按域名分子目录；敏感数据，勿提交 git）
+# Login session store: Cookie JSON per domain subdirectory. Sensitive — never commit to git.
+SESSIONS_DIR     = Path.home() / ".openclaw" / "rpa" / "sessions"
 
 # record-step 等待 recorder_server 写出 result_{seq}.json 的最长时间
+# Max wait time for recorder_server to write result_{seq}.json after each record-step
 RECORD_STEP_RESULT_WAIT_S   = 120
 RECORD_STEP_POLL_INTERVAL_S = 0.2
 RECORD_STEP_POLL_ITERATIONS = int(RECORD_STEP_RESULT_WAIT_S / RECORD_STEP_POLL_INTERVAL_S)  # 600
 
 # 证明文件最小字节数（避免空文件 / 未真实截图）
+# Minimum proof file size in bytes (guards against empty files / missing screenshots)
 MIN_PROOF_BYTES = 64
 
 
-# ── 状态管理 ────────────────────────────────────────────────
+# ── 登录会话 helpers / Login session helpers ─────────────────
+
+def _domain_from_url(url: str) -> str:
+    """从 URL 提取 hostname，去掉 www. 前缀，用作会话目录名。
+    Extract hostname from URL, strip www. prefix, used as session directory name."""
+    from urllib.parse import urlparse
+    host = urlparse(url).hostname or url
+    if host.startswith("www."):
+        host = host[4:]
+    return host
+
+
+def _cookies_path_for_domain(domain: str) -> Path:
+    return SESSIONS_DIR / domain / "cookies.json"
+
+
+def _cookies_meta_path_for_domain(domain: str) -> Path:
+    return SESSIONS_DIR / domain / "cookies_meta.json"
+
+
+# ── 状态管理 / Session state management ────────────────────────────────────
 
 def load_session() -> dict:
     if SESSION_FILE.exists():
@@ -76,7 +124,7 @@ def save_registry(registry: dict):
     REGISTRY_FILE.write_text(json.dumps(registry, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-# ── 命令实现 ────────────────────────────────────────────────
+# ── 命令实现 / Command implementations ──────────────────────────────────────
 
 def _proof_dir_for_task(task_name: str) -> Path:
     slug = _slugify(task_name)
@@ -97,43 +145,43 @@ def cmd_init(task_name: str) -> int:
         "created_at": datetime.now().isoformat(),
     }
     save_session(session)
-    print(f"✅ 录制会话已初始化：「{task_name}」")
-    print("Action Buffer 已清空，proofs 目录已重置。")
-    print(f"证明目录：{pdir}")
-    print("下一步：每步必须先浏览器实操成功，再带 --proof 调用 add。")
+    print(f"✅ 录制会话已初始化 / Recording session initialised: 「{task_name}」")
+    print("Action Buffer 已清空，proofs 目录已重置。/ Action buffer cleared, proofs directory reset.")
+    print(f"证明目录 / Proof dir: {pdir}")
+    print("下一步：每步必须先浏览器实操成功，再带 --proof 调用 add。/ Next: complete each step in the browser first, then call add --proof.")
     return 0
 
 
 def _validate_proof_file(path: Path):
     if not path.exists():
-        return False, f"证明路径不存在：{path}"
+        return False, f"证明路径不存在 / proof path not found: {path}"
     if not path.is_file():
-        return False, f"证明路径不是普通文件：{path}"
+        return False, f"证明路径不是普通文件 / proof path is not a regular file: {path}"
     try:
         sz = path.stat().st_size
     except OSError as e:
-        return False, f"无法读取证明文件：{e}"
+        return False, f"无法读取证明文件 / cannot read proof file: {e}"
     if sz < MIN_PROOF_BYTES:
-        return False, f"证明文件过小（{sz} < {MIN_PROOF_BYTES} 字节），拒绝记录"
+        return False, f"证明文件过小 / proof file too small ({sz} < {MIN_PROOF_BYTES} bytes), rejected"
     return True, ""
 
 
 def cmd_add(action_json: str, proof_path: str) -> int:
     session = load_session()
     if session["state"] != "RECORDING":
-        print(f"❌ 当前状态为 {session['state']}，未处于录制中。请先执行 init <task_name>", file=sys.stderr)
+        print(f"❌ 当前状态为 {session['state']}，未处于录制中。请先执行 init <task_name> / Current state is {session['state']}, not recording. Run init <task_name> first.", file=sys.stderr)
         return 1
 
     src = Path(proof_path).expanduser().resolve()
     ok, err = _validate_proof_file(src)
     if not ok:
-        print(f"❌ 拒绝记录：{err}", file=sys.stderr)
+        print(f"❌ 拒绝记录 / Rejected: {err}", file=sys.stderr)
         return 1
 
     try:
         action = json.loads(action_json)
     except json.JSONDecodeError as e:
-        print(f"❌ 无效 JSON：{e}", file=sys.stderr)
+        print(f"❌ 无效 JSON / Invalid JSON: {e}", file=sys.stderr)
         return 1
 
     task_name = session.get("task") or "task"
@@ -151,17 +199,17 @@ def cmd_add(action_json: str, proof_path: str) -> int:
 
     session["buffer"].append(action)
     save_session(session)
-    print(f"✅ [步骤 {action['step']}] 已提交证明 → {dest}")
-    print(f"   {action.get('context', '已记录')}（共 {len(session['buffer'])} 步）")
+    print(f"✅ [步骤 / step {action['step']}] 已提交证明 / proof submitted → {dest}")
+    print(f"   {action.get('context', 'recorded')}（共 / total {len(session['buffer'])} 步 / steps）")
     return 0
 
 
 def cmd_status() -> int:
     session = load_session()
-    print(f"状态：{session['state']}")
-    print(f"任务：{session.get('task') or '无'}")
+    print(f"状态 / State: {session['state']}")
+    print(f"任务 / Task: {session.get('task') or '无 / none'}")
     buf = session.get("buffer", [])
-    print(f"已录制步骤：{len(buf)}（每步须含有效 proof）")
+    print(f"已录制步骤 / Recorded steps: {len(buf)}（每步须含有效 proof / each step must have a valid proof）")
     for a in buf:
         pf = a.get("proof", "")
         ok = "✅" if pf and Path(pf).is_file() else "❌"
@@ -177,7 +225,7 @@ def cmd_generate() -> int:
     session = load_session()
     buf = session.get("buffer", [])
     if not buf:
-        print("❌ Action Buffer 为空，无法生成脚本。", file=sys.stderr)
+        print("❌ Action Buffer 为空，无法生成脚本。/ Action buffer is empty, cannot generate script.", file=sys.stderr)
         return 1
 
     # 强制：每步必须有可验证的 proof，否则拒绝生成
@@ -186,14 +234,16 @@ def cmd_generate() -> int:
         if not pf:
             print(
                 f"❌ 拒绝生成：步骤 {a.get('step')} 缺少 proof 字段。"
-                "请用「浏览器实操成功 → 保存截图/结果文件 → add --proof」重新录制。",
+                "请用「浏览器实操成功 → 保存截图/结果文件 → add --proof」重新录制。"
+                f" / Rejected: step {a.get('step')} is missing a proof field."
+                " Re-record using: browser action → save screenshot/result → add --proof.",
                 file=sys.stderr,
             )
             return 1
         p = Path(pf)
         ok, err = _validate_proof_file(p)
         if not ok:
-            print(f"❌ 拒绝生成：步骤 {a.get('step')} 的证明无效：{err}", file=sys.stderr)
+            print(f"❌ 拒绝生成：步骤 {a.get('step')} 的证明无效：{err} / Rejected: proof for step {a.get('step')} is invalid: {err}", file=sys.stderr)
             return 1
 
     task_name = session.get("task") or "task"
@@ -211,11 +261,11 @@ def cmd_generate() -> int:
     # 重置会话
     save_session({"task": None, "state": "IDLE", "buffer": []})
 
-    print(f"✨ RPA 脚本生成成功！")
-    print(f"📄 文件：{output_path}")
-    print(f"📋 共录制 {len(buf)} 个步骤")
-    print(f"\n运行方式：python3 {output_path}")
-    print(f'下次直接说"运行：{task_name}"即可重放。')
+    print(f"✨ RPA 脚本生成成功！/ RPA script generated successfully!")
+    print(f"📄 文件 / File: {output_path}")
+    print(f"📋 共录制 {len(buf)} 个步骤 / {len(buf)} steps recorded")
+    print(f"\n运行方式 / Run: python3 {output_path}")
+    print(f'下次直接说"运行：{task_name}"即可重放。/ Next time say "run:{task_name}" to replay.')
     return 0
 
 
@@ -223,36 +273,36 @@ def cmd_run(task_name: str) -> int:
     registry = load_registry()
     if task_name not in registry:
         available = list(registry.keys())
-        print(f"❌ 未找到任务「{task_name}」。", file=sys.stderr)
+        print(f"❌ 未找到任务「{task_name}」。/ Task not found: {task_name}", file=sys.stderr)
         if available:
-            print(f"   可用任务：{', '.join(available)}", file=sys.stderr)
+            print(f"   可用任务 / Available tasks: {', '.join(available)}", file=sys.stderr)
         else:
-            print("   暂无已录制任务，请先录制。", file=sys.stderr)
+            print("   暂无已录制任务，请先录制。/ No recorded tasks yet, record one first.", file=sys.stderr)
         return 1
 
     script_path = RPA_DIR / registry[task_name]
     if not script_path.exists():
-        print(f"❌ 脚本文件不存在：{script_path}", file=sys.stderr)
+        print(f"❌ 脚本文件不存在 / Script file not found: {script_path}", file=sys.stderr)
         return 1
 
     if envcheck.ensure_playwright_chromium(auto_install=True) != 0:
         return 1
 
-    print(f"▶️  正在运行「{task_name}」…")
+    print(f"▶️  正在运行 / Running: 「{task_name}」…")
     result = subprocess.run([sys.executable, str(script_path)])
     if result.returncode == 0:
-        print(f"✅ 运行完毕：「{task_name}」")
+        print(f"✅ 运行完毕 / Done: 「{task_name}」")
     else:
-        print(f"❌ 运行失败（exit code {result.returncode}）", file=sys.stderr)
+        print(f"❌ 运行失败 / Run failed (exit code {result.returncode})", file=sys.stderr)
     return result.returncode
 
 
 def cmd_list() -> int:
     registry = load_registry()
     if not registry:
-        print("暂无已录制的任务。")
+        print("暂无已录制的任务。/ No recorded tasks yet.")
         return 0
-    print("已录制的 RPA 任务：")
+    print("已录制的 RPA 任务 / Recorded RPA tasks:")
     for task, filename in registry.items():
         exists = "✅" if (RPA_DIR / filename).exists() else "❌ 文件缺失"
         print(f"  {exists}  「{task}」→ rpa/{filename}")
@@ -266,13 +316,13 @@ def cmd_reset() -> int:
         pdir = _proof_dir_for_task(task)
         if pdir.exists():
             shutil.rmtree(pdir)
-            print(f"🗑️  已删除证明目录：{pdir}")
+            print(f"🗑️  已删除证明目录 / Proof directory deleted: {pdir}")
     save_session({"task": None, "state": "IDLE", "buffer": []})
-    print("🗑️  录制已放弃，Action Buffer 已清空。")
+    print("🗑️  录制已放弃，Action Buffer 已清空。/ Recording aborted, action buffer cleared.")
     return 0
 
 
-# ── 计划管理命令（多步指令拆解，防 LLM 超时）──────────────────────────────
+# ── 计划管理命令（多步指令拆解，防 LLM 超时）/ Plan management (multi-step decomposition, prevents LLM timeout) ──
 
 PLAN_FILE = SESSION_REC_DIR / "plan.json"
 
@@ -291,11 +341,11 @@ def cmd_plan_set(steps_json: str) -> int:
     try:
         steps = json.loads(steps_json)
     except json.JSONDecodeError as e:
-        print(f"❌ 无效 JSON：{e}", file=sys.stderr)
+        print(f"❌ 无效 JSON / Invalid JSON: {e}", file=sys.stderr)
         return 1
 
     if not isinstance(steps, list) or not steps:
-        print("❌ steps 必须是非空字符串数组，如 '[\"步骤1\", \"步骤2\"]'", file=sys.stderr)
+        print("❌ steps 必须是非空字符串数组，如 '[\"步骤1\", \"步骤2\"]' / steps must be a non-empty string array, e.g. '[\"step1\", \"step2\"]'", file=sys.stderr)
         return 1
 
     SESSION_REC_DIR.mkdir(parents=True, exist_ok=True)
@@ -307,11 +357,11 @@ def cmd_plan_set(steps_json: str) -> int:
     }
     PLAN_FILE.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print(f"📋 任务计划已创建（共 {len(steps)} 步）：")
+    print(f"📋 任务计划已创建 / Plan created ({len(steps)} steps):")
     for i, step in enumerate(steps, 1):
         marker = "▶️ " if i == 1 else "  "
         print(f"  {marker}{i}. {step}")
-    print(f"\n当前执行：第 1/{len(steps)} 步")
+    print(f"\n当前执行 / Now executing: step 1/{len(steps)}")
     return 0
 
 
@@ -319,23 +369,23 @@ def cmd_plan_next() -> int:
     """Advance plan to next step."""
     plan = _load_plan()
     if plan is None:
-        print("❌ 无活跃计划。请先执行 plan-set。", file=sys.stderr)
+        print("❌ 无活跃计划。请先执行 plan-set。/ No active plan. Run plan-set first.", file=sys.stderr)
         return 1
 
     current = plan["current"]
     total   = plan["total"]
 
     if current >= total:
-        print(f"🎉 所有 {total} 步均已完成！")
-        print('请说「结束录制」生成 RPA 脚本。')
+        print(f"🎉 所有 {total} 步均已完成！/ All {total} steps completed!")
+        print('请说「结束录制」生成 RPA 脚本。/ Say "end recording" to generate the RPA script.')
         return 0
 
     plan["current"] = current + 1
     PLAN_FILE.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
 
     next_desc = plan["steps"][plan["current"] - 1]
-    print(f"📍 进度：{plan['current']}/{total}")
-    print(f"当前步骤：{next_desc}")
+    print(f"📍 进度 / Progress: {plan['current']}/{total}")
+    print(f"当前步骤 / Current step: {next_desc}")
     return 0
 
 
@@ -343,12 +393,12 @@ def cmd_plan_status() -> int:
     """Show current plan progress."""
     plan = _load_plan()
     if plan is None:
-        print("ℹ️  无活跃计划。")
+        print("ℹ️  无活跃计划。/ No active plan.")
         return 0
 
     current = plan["current"]
     total   = plan["total"]
-    print(f"📋 任务计划进度（{current}/{total} 步）：")
+    print(f"📋 任务计划进度 / Plan progress ({current}/{total} 步 / steps):")
     for i, step in enumerate(plan["steps"], 1):
         if i < current:
             marker = "✅"
@@ -360,7 +410,7 @@ def cmd_plan_status() -> int:
     return 0
 
 
-# ── Recorder 模式命令 ───────────────────────────────────────────────────────
+# ── Recorder 模式命令 / Recorder mode commands ──────────────────────────────
 
 def _rec_current_seq() -> int:
     """Return current cmd seq from recorder cmd.json, or -1."""
@@ -389,19 +439,357 @@ def _rec_send_shutdown():
     time.sleep(1.0)
 
 
-def cmd_record_start(task_name: str) -> int:
-    """Launch headed Playwright recorder server and wait for ready."""
+def cmd_login_start(url: str) -> int:
+    """打开 headed 浏览器到指定登录页；用户手动完成登录后执行 login-done 导出 Cookie。
+    Open a headed browser to the given login URL; run login-done after manual login to export cookies."""
     if envcheck.ensure_playwright_chromium(auto_install=True) != 0:
         return 1
 
-    # Clean up any stale session
+    if SESSION_REC_DIR.exists():
+        shutil.rmtree(SESSION_REC_DIR)
+    SESSION_REC_DIR.mkdir(parents=True)
+
+    domain = _domain_from_url(url)
+    SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+    (SESSIONS_DIR / domain).mkdir(parents=True, exist_ok=True)
+    cookies_path      = _cookies_path_for_domain(domain)
+    cookies_meta_path = _cookies_meta_path_for_domain(domain)
+
+    task_payload = {
+        "task":                f"login_{domain}",
+        "mode":                "login_capture",
+        "login_url":           url,
+        "domain":              domain,
+        "cookies_output":      str(cookies_path),
+        "cookies_meta_output": str(cookies_meta_path),
+    }
+    (SESSION_REC_DIR / "task.json").write_text(
+        json.dumps(task_payload, ensure_ascii=False, indent=2)
+    )
+
+    server_script = SKILL_DIR / "recorder_server.py"
+    if not server_script.exists():
+        print(f"❌ recorder_server.py 不存在 / not found: {server_script}", file=sys.stderr)
+        return 1
+
+    log_path = SESSION_REC_DIR / "server.log"
+    with open(log_path, "w") as log:
+        proc = subprocess.Popen(
+            [sys.executable, str(server_script)],
+            stdout=log,
+            stderr=log,
+            start_new_session=True,
+        )
+
+    print(f"⏳ 正在启动登录浏览器（PID: {proc.pid}）… / Starting login browser (PID: {proc.pid})…")
+
+    ready_path = SESSION_REC_DIR / "ready"
+    for _ in range(150):
+        if ready_path.exists():
+            break
+        time.sleep(0.2)
+    else:
+        print("❌ 浏览器启动超时（30s）。/ Browser startup timed out (30s).", file=sys.stderr)
+        print(f"   详细日志 / See log: {log_path}", file=sys.stderr)
+        return 1
+
+    print(f"✅ 浏览器已打开 / Browser opened → {url}")
+    print(f"   请在浏览器窗口中完成登录（账号/密码/短信/滑块等所有验证）。/ Complete login in the browser window (password / OTP / slider / QR code, etc.).")
+    print(f"   确认已登录后，执行 / When done, run: python3 rpa_manager.py login-done")
+    return 0
+
+
+def cmd_login_done() -> int:
+    """通知浏览器导出当前 Cookie 并关闭，完成登录会话保存。
+    Signal the login browser to export current cookies and shut down; finishes session save."""
+    pid_path  = SESSION_REC_DIR / "server.pid"
+    task_path = SESSION_REC_DIR / "task.json"
+
+    if not pid_path.exists():
+        print("❌ 没有运行中的登录浏览器，请先执行 login-start <url>。/ No running login browser — run login-start <url> first.", file=sys.stderr)
+        return 1
+    if not task_path.exists():
+        print("❌ 找不到任务信息（task.json）。/ task.json not found.", file=sys.stderr)
+        return 1
+
+    task_data         = json.loads(task_path.read_text())
+    domain            = task_data.get("domain", "unknown")
+    cookies_output    = task_data.get("cookies_output", "")
+    cookies_meta_out  = task_data.get("cookies_meta_output", "")
+
+    seq = _rec_current_seq()
+    (SESSION_REC_DIR / "cmd.json").write_text(
+        json.dumps({"action": "login_done", "seq": seq + 1})
+    )
+    print("⏳ 正在导出 Cookie，请稍候…")
+
+    done_path = SESSION_REC_DIR / "login_done"
+    for _ in range(75):
+        if done_path.exists():
+            break
+        time.sleep(0.2)
+    else:
+        print("❌ Cookie 导出超时（15s）。", file=sys.stderr)
+        return 1
+
+    if SESSION_REC_DIR.exists():
+        shutil.rmtree(SESSION_REC_DIR)
+
+    if cookies_output and Path(cookies_output).exists():
+        meta: dict = {}
+        if cookies_meta_out and Path(cookies_meta_out).exists():
+            try:
+                meta = json.loads(Path(cookies_meta_out).read_text())
+            except Exception:
+                pass
+        total         = meta.get("total", "?")
+        session_count = meta.get("session_cookies", 0)
+        earliest      = meta.get("earliest_expires")
+        print(f"✅ Cookie 已保存 → {cookies_output}")
+        print(f"   域名：{domain}，共 {total} 条（其中 {session_count} 条为会话型）")
+        if earliest:
+            print(f"   ⏰ 参考过期时间（最早一条）：{earliest}（实际以服务端策略为准，可能更早）")
+        else:
+            print(f"   ⚠️  所有 Cookie 均为会话类型，无固定过期时间，以页面是否仍登录为准")
+        print(f"\n   下次录制或回放自动注入：在任务描述中加入 #rpa-autologin {domain}")
+    else:
+        print("❌ Cookie 文件未生成，请确认浏览器中已完成登录。", file=sys.stderr)
+        return 1
+
+    return 0
+
+
+def cmd_login_list() -> int:
+    """列出所有已保存的登录会话及参考过期状态。
+    List all saved login sessions with their reference expiry status."""
+    from datetime import datetime as _dt
+
+    if not SESSIONS_DIR.exists():
+        print("📭 暂无已保存的登录会话。")
+        print(f"   使用 python3 rpa_manager.py login-start <url> 来保存。")
+        return 0
+
+    domains = sorted(d for d in SESSIONS_DIR.iterdir()
+                     if d.is_dir() and (d / "cookies.json").exists())
+    if not domains:
+        print("📭 暂无已保存的登录会话。")
+        print(f"   使用 python3 rpa_manager.py login-start <url> 来保存。")
+        return 0
+
+    print(f"\n{'域名':<32} {'条数':>4} {'会话型':>4} {'保存时间':<22} 状态")
+    print("─" * 92)
+    for domain_dir in domains:
+        meta: dict = {}
+        meta_path = domain_dir / "cookies_meta.json"
+        if meta_path.exists():
+            try:
+                meta = json.loads(meta_path.read_text())
+            except Exception:
+                pass
+        total         = meta.get("total", "?")
+        session_count = meta.get("session_cookies", 0)
+        saved_at      = meta.get("saved_at", "—")
+        earliest      = meta.get("earliest_expires")
+
+        if not earliest:
+            status = "⚠️  无固定过期时间（会话型）"
+        else:
+            try:
+                exp_dt    = _dt.fromisoformat(earliest)
+                days_left = (exp_dt - _dt.now()).days
+                if days_left < 0:
+                    status = f"🔴 已过参考期（{earliest[:10]}）"
+                elif days_left <= 7:
+                    status = f"🟡 即将到期（{days_left}天，{earliest[:10]}）"
+                else:
+                    status = f"🟢 {days_left}天后参考过期（{earliest[:10]}）"
+            except Exception:
+                status = f"✅ 参考期：{earliest}"
+
+        print(f"{domain_dir.name:<32} {str(total):>4} {str(session_count):>4} {saved_at:<22} {status}")
+
+    print(f"\n共 {len(domains)} 条，保存于：{SESSIONS_DIR}")
+    print("使用方式：录制或回放任务时，在任务描述中加入 #rpa-autologin <域名或完整URL>")
+    return 0
+
+
+def cmd_help() -> int:
+    """打印完整指令参考表，供开发者快速查阅。
+    Print the full command reference for developers."""
+    print("""
+╔══════════════════════════════════════════════════════════════════════════════╗
+║          OpenClaw RPA Manager — 指令参考 / Command Reference               ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+【登录会话管理 / Login Session Management】
+  适用场景：短信验证码、滑块、扫码、企业 SSO 等复杂登录场景。
+  Use when: SMS OTP, CAPTCHA slider, QR-code login, enterprise SSO, etc.
+
+  login-start <url>
+      打开 headed 浏览器到登录页，用户手动完成登录。
+      Open headed browser to login page; user logs in manually.
+      示例 / Example:
+        python3 rpa_manager.py login-start https://passport.ctrip.com/user/login
+
+  login-done
+      登录完成后执行，导出 Cookie 并关闭浏览器。
+      Run after manual login: exports cookies and closes the browser.
+      Cookie 保存至 / Saved to: ~/.openclaw/rpa/sessions/<domain>/cookies.json
+
+  login-list
+      列出所有已保存的登录会话及参考过期状态（🟢已保存 / 🟡即将到期 / 🔴已过期）。
+      List all saved login sessions with reference expiry status.
+
+  ➜ 录制/回放时注入 Cookie / Inject cookies during record or replay:
+      在任务描述中加入 #rpa-autologin <域名或URL>
+      Add #rpa-autologin <domain|url> to the task description.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【Recorder 模式 / Recorder Mode（推荐 / Recommended）】
+  基于真实浏览器一步步录制，record-end 后自动编译为可独立运行的 Python 脚本。
+  Records in a real headed browser step-by-step; compiles to standalone Python on record-end.
+
+  record-start <task> [--profile A-N] [--autologin <domain|url>]
+      启动 Recorder 浏览器，进入录制模式；--autologin 自动注入已保存的登录 Cookie。
+      Launch headed Playwright Recorder; --autologin injects saved cookies before recording starts.
+
+  record-step '<json>'
+      向 Recorder 发送一步操作（goto / click / fill / snapshot 等）。
+      Send a single action step to the running Recorder.
+      示例 / Example:
+        python3 rpa_manager.py record-step '{"action":"snapshot"}'
+        python3 rpa_manager.py record-step '{"action":"goto","url":"https://example.com"}'
+
+  record-status
+      查看当前 Recorder 运行状态与已录步骤数。
+      Show running status and recorded step count.
+
+  record-end [--abort]
+      结束录制并编译生成 rpa/<task>.py；加 --abort 则放弃。
+      End recording and compile script; --abort discards the session.
+
+  deps-check <A-N>
+      按能力码检查 Python / Playwright / openpyxl / python-docx 是否就绪。
+      Check dependencies by capability code (A–N maps to feature sets).
+
+  deps-install <A-N>
+      安装缺失依赖（与 Playwright 同一 python3）。
+      Install missing deps using the same python3 as Playwright.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【计划管理 / Plan Management（防 LLM 超时 / Prevents LLM timeout）】
+
+  plan-set '<json-array>'
+      设置多步执行计划，LLM 每轮只推进一步。
+      Set a multi-step plan; LLM advances one step per turn.
+      示例 / Example:
+        python3 rpa_manager.py plan-set '["打开携程首页","搜索酒店","截图结果"]'
+
+  plan-next      推进到下一步 / Advance to next step.
+  plan-status    查看计划进度 / Show plan progress.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【通用命令 / General Commands】
+
+  run <task_name>    运行已录制的任务脚本 / Run a saved task script.
+  list               列出所有已保存的任务 / List all saved tasks.
+  env-check          检查 Python / Playwright 环境 / Check Python + Playwright environment.
+  help               显示本帮助 / Show this help.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【Legacy 模式 / Legacy Mode（兼容保留 / kept for compatibility）】
+  init / add --proof <file> '<json>' / generate / status / reset
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【对话指令（发给 AI / Chat commands sent to the AI assistant）】
+  #rpa / #自动化机器人 / #RPA     → 开始新录制任务 / Start a new recording task
+  #rpa-login <url>              → 保存登录 Cookie（分步：login-start + 手动登录 + login-done）
+  #rpa-login-done               → 通知导出 Cookie / Signal cookie export
+  #rpa-autologin <domain|url>   → 录制/回放时注入已保存的 Cookie / Inject saved cookies
+  #rpa-autologin-list           → 查看已保存的登录会话 / View saved login sessions
+  #rpa-list                     → 查看已录制的任务 / List recorded tasks
+  #rpa-run:<task>               → 回放指定任务 / Replay a specific task
+  #rpa-help                     → 显示本指令帮助 / Show this command reference
+""")
+    return 0
+
+
+def cmd_deps_check(capability: str) -> int:
+    """Exit 0 if Python + Playwright/Chromium + profile office libs are OK."""
+    return envcheck.print_deps_capability_report(capability)
+
+
+def cmd_deps_install(capability: str) -> int:
+    """pip install openpyxl/python-docx as needed; ensure Playwright Chromium."""
+    return envcheck.ensure_capability_deps(capability, auto_chromium=True)
+
+
+def cmd_record_start(
+    task_name: str,
+    profile: Optional[str] = None,
+    autologin: Optional[str] = None,
+) -> int:
+    """Launch recorder server and wait for ready.
+    For browser capabilities (A/D/E/G) a headed Chromium is opened; for file-only capabilities
+    (B/C/F/N) no browser is started.
+    autologin: domain or URL; if provided, looks up saved cookies and injects them into the recorder context."""
+    _needs_browser = True
+    if profile:
+        _cap = envcheck.normalize_capability_letter(profile)
+        if _cap and _cap in envcheck.CAPABILITY_PROFILES:
+            _needs_browser = envcheck.CAPABILITY_PROFILES[_cap]["needs_browser"]
+
+    if _needs_browser:
+        if envcheck.ensure_playwright_chromium(auto_install=True) != 0:
+            return 1
+
+    # Resolve autologin domain → cookies file path
+    # 解析 autologin 域名 → Cookie 文件路径（若用户传入的是 URL，提取 hostname）
+    resolved_cookies_file = ""
+    if autologin:
+        domain = _domain_from_url(autologin) if autologin.startswith("http") else autologin.strip()
+        cookies_file_path = _cookies_path_for_domain(domain)
+        if cookies_file_path.exists():
+            resolved_cookies_file = str(cookies_file_path)
+            print(f"🍪 已找到 {domain} 的登录 Cookie，将在浏览器启动后自动注入。")
+            print(f"   Cookie 文件：{resolved_cookies_file}")
+        else:
+            print(f"⚠️  未找到 {domain} 的登录会话文件：{cookies_file_path}", file=sys.stderr)
+            print(f"   请先执行：python3 rpa_manager.py login-start <登录页URL>", file=sys.stderr)
+            return 1
+
+    # Clean up any stale session / 清理残留会话
     if SESSION_REC_DIR.exists():
         shutil.rmtree(SESSION_REC_DIR)
     SESSION_REC_DIR.mkdir(parents=True)
 
     # Write task info so recorder_server.py can read it
+    # 将任务信息写入 task.json，recorder_server.py 启动时读取
+    task_payload: dict = {"task": task_name}
+    if profile:
+        cap = envcheck.normalize_capability_letter(profile)
+        if cap is None:
+            print(
+                f"❌ 无效能力码 {profile!r}（须为 A–G 或 N，与 ONBOARDING 一致）",
+                file=sys.stderr,
+            )
+            return 1
+        p = envcheck.CAPABILITY_PROFILES[cap]
+        task_payload["capability"] = cap
+        task_payload["needs_excel"] = p["needs_excel"]
+        task_payload["needs_word"] = p["needs_word"]
+        task_payload["needs_browser"] = p["needs_browser"]
+    if resolved_cookies_file:
+        # cookies_file 字段由 recorder_server.py 在 new_context 之后读取并注入
+        # recorder_server.py reads this after new_context() to call add_cookies()
+        task_payload["cookies_file"] = resolved_cookies_file
     (SESSION_REC_DIR / "task.json").write_text(
-        json.dumps({"task": task_name}, ensure_ascii=False)
+        json.dumps(task_payload, ensure_ascii=False, indent=2)
     )
 
     server_script = SKILL_DIR / "recorder_server.py"
@@ -431,8 +819,13 @@ def cmd_record_start(task_name: str) -> int:
         print(f"   详细日志：{log_path}", file=sys.stderr)
         return 1
 
-    print(f"✅ Recorder 已就绪！浏览器窗口已打开，请注视屏幕。")
+    if _needs_browser:
+        print(f"✅ Recorder 已就绪！浏览器窗口已打开，请注视屏幕。")
+    else:
+        print(f"✅ Recorder 已就绪！（无浏览器模式，仅支持 Excel / Word / API 等文件操作）")
     print(f"   任务：「{task_name}」")
+    if resolved_cookies_file:
+        print(f"   🍪 已注入登录 Cookie（{resolved_cookies_file}）")
     print(f"   截图保存至：{SESSION_REC_DIR / 'screenshots'}")
     _append_playwright_cmd_log(
         {
@@ -445,8 +838,12 @@ def cmd_record_start(task_name: str) -> int:
     )
     print(f"   📝 Playwright 指令日志（每步追加）：{PLAYWRIGHT_CMD_LOG}")
     print()
-    print("下一步建议：先发一条 snapshot 了解页面元素，再执行 goto/fill/select_option/click 等操作。")
-    print('示例：python3 rpa_manager.py record-step \'{"action":"snapshot"}\'')
+    if _needs_browser:
+        print("下一步建议：先发一条 snapshot 了解页面元素，再执行 goto/fill/select_option/click 等操作。")
+        print('示例：python3 rpa_manager.py record-step \'{"action":"snapshot"}\'')
+    else:
+        print("下一步建议：直接发送 excel_write / word_write / api_call / python_snippet 等文件操作步骤。")
+        print('示例：python3 rpa_manager.py record-step \'{"action":"excel_write","path":"report.xlsx","sheet":"Sheet1","value":[["A","B"]]}\'')
     return 0
 
 
@@ -680,7 +1077,7 @@ def cmd_record_end(abort: bool = False) -> int:
     return 0
 
 
-# ── Playwright 脚本生成 ───────────────────────────────────────
+# ── Playwright 脚本生成 / Playwright script generation ──────────────────────
 
 def _slugify(text: str) -> str:
     text = text.lower().strip()
@@ -884,7 +1281,7 @@ if __name__ == "__main__":
 '''
 
 
-# ── 入口 ─────────────────────────────────────────────────
+# ── 入口 / Entry point ────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(
@@ -893,9 +1290,43 @@ def main():
     )
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
 
+    # ── 帮助 / Help ──
+    sub.add_parser("help", help="显示完整指令参考（中英双语） / Show full bilingual command reference")
+
+    # ── 登录会话管理 / Login session management ──
+    p_ls = sub.add_parser("login-start", help="打开浏览器到指定登录页，用户手动登录后执行 login-done")
+    p_ls.add_argument("url", help="目标登录页 URL，如 https://passport.ctrip.com/user/login")
+
+    sub.add_parser("login-done", help="导出当前浏览器 Cookie 并关闭（须先执行 login-start）")
+    sub.add_parser("login-list", help="列出所有已保存的登录会话及参考过期状态")
+
     # ── Recorder 模式 ──
     p_rs = sub.add_parser("record-start",  help="启动 headed Playwright Recorder（有界面真实录制）")
     p_rs.add_argument("task_name", help="任务名称")
+    p_rs.add_argument(
+        "--profile",
+        metavar="A-N",
+        default=None,
+        help="能力码（A–G 或 N），写入 recorder_session/task.json，供 Office 增补与文档化",
+    )
+    p_rs.add_argument(
+        "--autologin",
+        metavar="DOMAIN_OR_URL",
+        default=None,
+        help="自动注入已保存的登录 Cookie（域名或URL，须先执行 login-start + login-done）/ Auto-inject saved login cookies by domain or URL",
+    )
+
+    p_dc = sub.add_parser(
+        "deps-check",
+        help="按能力码检查依赖（须与运行 rpa_manager / Playwright 为同一 python3）",
+    )
+    p_dc.add_argument("capability", help="单字母：A–G 或 N（见 SKILL 中 ONBOARDING）")
+
+    p_di = sub.add_parser(
+        "deps-install",
+        help="按能力码安装缺失依赖（openpyxl/python-docx + Playwright Chromium）",
+    )
+    p_di.add_argument("capability", help="单字母：A–G 或 N")
 
     p_rp = sub.add_parser("record-step",   help="向 Recorder 发送单步操作（含 select_option）")
     p_rp.add_argument("step_json", help='操作 JSON，如 \'{"action":"snapshot"}\'')
@@ -938,8 +1369,20 @@ def main():
 
     args = parser.parse_args()
     dispatch = {
+        # 帮助 / Help
+        "help":          cmd_help,
+        # 登录会话管理 / Login session management
+        "login-start":   lambda: cmd_login_start(args.url),
+        "login-done":    cmd_login_done,
+        "login-list":    cmd_login_list,
         # Recorder 模式
-        "record-start":  lambda: cmd_record_start(args.task_name),
+        "record-start":  lambda: cmd_record_start(
+            args.task_name,
+            getattr(args, "profile", None),
+            getattr(args, "autologin", None),
+        ),
+        "deps-check":    lambda: cmd_deps_check(args.capability),
+        "deps-install":  lambda: cmd_deps_install(args.capability),
         "record-step":   lambda: cmd_record_step(args.step_json),
         "record-status": cmd_record_status,
         "record-end":    lambda: cmd_record_end(getattr(args, "abort", False)),

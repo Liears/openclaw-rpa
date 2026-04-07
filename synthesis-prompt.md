@@ -23,6 +23,19 @@
 
 ---
 
+## Excel / Word（openpyxl / python-docx）— 与 Recorder 拼装共存
+
+| 规则 | 说明 |
+|------|------|
+| **主路径** | 录制时通过 **`record-step`** 的 **`excel_write`** / **`word_write`**；`recorder_server` 在 **`_build_final_script()`** 中把对应 `code_block` 与 Playwright 步骤写入**同一** `rpa/*.py`（`async def run()` 内），并在文件顶部按需加入 `openpyxl` / `docx` 的 import。 |
+| **兜底** | 仅当未录制 Office 步骤但 `task.json` 声明需要且用户已在对话中写清结构时，才允许在 `record-end` 成功后 **向该 `.py` 末尾追加** 补充代码；**不得**覆盖录制器已生成段落。 |
+| **禁止** | 删除、重排或全文替换 `_build_final_script` 已写入的 Playwright / `api_call` / Office 录制块。 |
+| **依赖** | 见 `requirements.txt` 全量说明；安装：`rpa_manager.py deps-install {能力码}`。 |
+
+`excel_write` / `word_write` 的 JSON 字段定义见 **SKILL.zh-CN.md** / **SKILL.en-US.md**「单步录制协议」表格。
+
+---
+
 ## 输入格式
 
 每个 Action Buffer 条目包含：

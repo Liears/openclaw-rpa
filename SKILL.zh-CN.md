@@ -1,6 +1,6 @@
 ---
 name: openclaw-rpa
-description: 录制浏览器网站与本机文件操作；回放不调大模型—省费用、更快、少幻觉。github.com/laziobird/openclaw-rpa · #rpa-list #rpa-run #运行 #自动化机器人 #RPA。Use when user says #自动化机器人, #RPA, #rpa, #rpa-list, 录制自动化, browser automation, or asks to automate browser/file tasks.
+description: 录制浏览器网站与本机文件操作；回放不调大模型—省费用、更快、少幻觉。github.com/laziobird/openclaw-rpa · #rpa-list #rpa-run #rpa-login #rpa-login-done #rpa-autologin #rpa-autologin-list #rpa-help #运行 #自动化机器人 #RPA。Use when user says #自动化机器人, #RPA, #rpa, #rpa-list, #rpa-login, #rpa-autologin, #rpa-help, 录制自动化, browser automation, or asks to automate browser/file tasks.
 metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 ---
 
@@ -10,7 +10,7 @@ metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 
 # openclaw-rpa
 
-**典型场景示例（录制一次、反复回放；须遵守各站服务条款与所在地法规）：** 电商 **登录与购物** 全流程自动化；**Yahoo 财经** 股票行情与新闻 **自动获取**；电影类网站 **一键汇总影评与评分** 等。
+**典型场景示例（录制一次、反复回放；须遵守各站服务条款与所在地法规）：** 电商 **登录与购物** 全流程自动化；**典型场景 1**（见下）**行情 API + 新闻页 + 本地简报**；**Yahoo 财经** 仅浏览器侧行情与新闻；电影类网站 **一键汇总影评与评分**；**应付对账**（API **仅拉**待对账数据 + 本地 Excel 与发票核对 + **Word 表格**报告）详见 **[articles/scenario-ap-reconciliation.md](articles/scenario-ap-reconciliation.md)**。
 
 ## 这个 skill 做什么
 
@@ -30,10 +30,77 @@ metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 | 你想… | 发什么 |
 |--------|--------|
 | **开始录制**新流程 | `#自动化机器人`、`#RPA`、`#rpa`，或提到 **Playwright automation** |
+| **录制含 API 接口的流程** | `#rpa-api`（在消息里直接描述 API 或粘贴接口文档参数块 `###...###`） |
 | **看已保存的任务** | `#rpa-list` |
 | **执行已保存任务**（如新对话） | `#rpa-run:{任务名}` |
 | **当前会话里执行** | `#运行:{任务名}` |
 | **在 OpenClaw + 飞书等里定时/提醒** | 自然语言 + `#rpa-run:…`（以实际接入为准） |
+| **保存网站登录态**（含验证码/短信/滑块） | `#rpa-login <登录页URL>` |
+| **查看所有已保存的登录会话** | `#rpa-autologin-list` |
+| **录制/回放时自动注入已保存 Cookie** | 任务描述中加 `#rpa-autologin <域名或URL>` |
+| **查看完整指令列表与用法** | `#rpa-help` |
+
+## 登录会话管理（#rpa-login / #rpa-autologin）
+
+适用于需要短信验证码、滑块、扫码等**复杂登录**的网站（携程、微信、企业内网等）。核心思路：**只登录一次，Cookie 重复复用**。
+
+### 三步完成登录会话保存
+
+```
+第 1 步：#rpa-login https://passport.ctrip.com/user/login
+         → 弹出浏览器，跳转到该登录页
+
+第 2 步：在浏览器里完成登录（账号/密码/短信/滑块，随便几步都行）
+
+第 3 步：#rpa-login-done
+         → 自动导出 Cookie，保存到 ~/.openclaw/rpa/sessions/passport.ctrip.com/cookies.json
+         → 显示 Cookie 条数与参考过期时间
+```
+
+### 查看所有已保存的登录会话
+
+```
+#rpa-autologin-list
+```
+
+输出示例：
+```
+域名                             条数  会话型  保存时间               状态
+─────────────────────────────────────────────────────────────────────────────────────────
+passport.ctrip.com                 42      3  2026-04-07T10:23:15    🟢 28天后参考过期（2026-05-05）
+accounts.google.com                18      8  2026-04-06T09:11:00    ⚠️  无固定过期时间（会话型）
+```
+
+### 录制/回放时自动注入 Cookie
+
+在任务描述（或任务名称）中加入 `#rpa-autologin <域名或URL>`，系统会在启动录制/回放时自动找到对应 Cookie 文件并注入：
+
+```
+#rpa-autologin passport.ctrip.com
+#rpa-autologin https://passport.ctrip.com/user/login
+```
+
+生成的 Python 脚本 `CONFIG` 里也会带上 `cookies_path`，直接可独立运行。
+
+### Cookie 过期了怎么办？
+
+Cookie 过期（或被服务端踢下线）时，脚本或录制里会被重定向回登录页。此时：
+1. 重新执行 `#rpa-login <url>` → 手动登录 → `#rpa-login-done`，**覆盖旧文件**。
+2. 再次录制/回放即可。
+
+> 💡 **技术用户路径**：如果你有 Chrome DevTools 导出的 Cookie JSON（Playwright `add_cookies` 兼容格式），也可以直接将文件放到 `~/.openclaw/rpa/sessions/<域名>/cookies.json`，无需 `#rpa-login`。
+
+### 查看所有可用指令 / View all commands
+
+发送 `#rpa-help` 或执行：
+
+```bash
+python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py help
+```
+
+输出完整指令参考表（中英双语），包含：登录会话管理、Recorder 录制、计划管理、通用命令、所有对话 `#` 指令及简单用法示例。
+
+---
 
 ## 快速上手
 
@@ -55,6 +122,8 @@ python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py run "任务名"
 |------|------|
 | **仅浏览器** | 如电商：**登录 → 选购 → 加购/结算**（参考仓库 `rpa/电商网站购物*.py`）；或 **Yahoo 财经** 行情/新闻；或电影站 **影评与评分** 汇总。 |
 | **浏览器 + 文件** | 同上，必要时 **`extract_text`** 落盘。 |
+| **浏览器 + HTTP API + 文件** | **典型场景 1**：**`api_call`**（如 [Alpha Vantage TIME_SERIES_DAILY](https://www.alphavantage.co/documentation/#daily)）写本地 JSON/文本，再配合 **`goto` + `extract_text`** 生成简报。 |
+| **HTTP API + Excel + Word（可无网页）** | **应付对账案例**：Mock **GET** 拉批次、本地多 Sheet 对账、**不提交 ERP**；结果 **Word 表格**；见 **[articles/scenario-ap-reconciliation.md](articles/scenario-ap-reconciliation.md)**。 |
 | **脚本内文件** | 录完后只加整理下载目录、改名等——可与网页无关。 |
 
 ## 推荐入门网站
@@ -97,13 +166,19 @@ python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py run "任务名"
 
 ## 触发检测
 
-每次收到用户消息时，**按下表顺序**检查（**先命中先执行**，后续不再判断；勿跳过顺序，否则 `#rpa-list` 会因含 `#rpa` 而误判为 ONBOARDING）：
+每次收到用户消息时，**按下表顺序**检查（**先命中先执行**，后续不再判断；⚠️ 顺序至关重要：所有以 `#rpa-` 开头的特殊指令必须在规则 9 之前命中，否则全部误判为 ONBOARDING）：
 
 | 顺序 | 条件 | 进入状态 |
 |:----:|------|---------|
 | 1 | 消息为 **RUN**（见下表） | RUN |
-| 2 | 消息**去掉首尾空白**后**等于** `#rpa-list`（**不区分大小写**，如 `#RPA-LIST`） | LIST |
-| 3 | 消息含 `#自动化机器人` 或 `#RPA` / `#rpa`（不区分大小写） | ONBOARDING |
+| 2 | 消息**去掉首尾空白**后**等于** `#rpa-list`（不区分大小写，如 `#RPA-LIST`） | LIST |
+| 3 | 消息**去掉首尾空白**后**等于** `#rpa-autologin-list`（不区分大小写） | AUTOLOGIN-LIST |
+| 4 | 消息**去掉首尾空白**后以 `#rpa-autologin ` 开头（后跟域名或URL，不区分大小写） | AUTOLOGIN |
+| 5 | 消息**去掉首尾空白**后**等于** `#rpa-login-done`（不区分大小写） | LOGIN-DONE |
+| 6 | 消息**去掉首尾空白**后以 `#rpa-login ` 开头（后跟 URL，不区分大小写） | LOGIN |
+| 7 | 消息**去掉首尾空白**后**等于** `#rpa-help`（不区分大小写） | HELP |
+| 8 | 消息含 `#rpa-api`（不区分大小写） | RPA-API |
+| 9 | 消息含 `#自动化机器人` 或 `#RPA` / `#rpa`（不区分大小写） | ONBOARDING |
 
 **RUN 触发（命中顺序 1 即进入 RUN）：**
 
@@ -119,18 +194,204 @@ python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py run "任务名"
 ## 状态机
 
 ```
-IDLE ──触发词──► ONBOARDING ──任务名──► RECORDING ──#结束录制──► GENERATING ──► IDLE
-                                           │#放弃
-                                           └──────────────────────────────► IDLE
+IDLE ──触发词──► ONBOARDING（展示报名规则）
+                    │
+                    └──用户一条消息（「任务名 能力码」同行，或两行）──► DEPS_CHECK
+                                                                          │
+                    ┌─────────────────────────────────────────────────────┘
+                    │  python3 rpa_manager.py deps-check <码>
+                    ├─未通过 + 用户仅发「取消」（固定选项）──────────────────► IDLE（中止）
+                    ├─未通过 + 用户「同意安装」──deps-install──再 deps-check──┐
+                    └─已通过 ────────────────────────────────────────────────┤
+                                                                               ▼
+                                                                        RECORDING
+RECORDING ──#结束录制──► GENERATING ──► IDLE
+    │#放弃
+    └──────────────────────────────────► IDLE
+IDLE ──"#rpa-api"──► RPA-API ──解析完成──► （任务名+能力码规则同 ONBOARDING）──► DEPS_CHECK ──► RECORDING …
 IDLE ──"#rpa-run:{任务名}" / "#运行:{任务名}"──► RUN ──► IDLE
 IDLE ──"#rpa-list"──► LIST ──► IDLE
+IDLE ──"#rpa-autologin-list"──► AUTOLOGIN-LIST ──► IDLE
+IDLE ──"#rpa-autologin <域名|URL>"──► AUTOLOGIN ──► IDLE（记录 autologin_domain，下次 record-start 时注入）
+IDLE ──"#rpa-login <URL>"──► LOGIN ──► IDLE（执行 login-start，等待用户手动登录）
+IDLE ──"#rpa-login-done"──► LOGIN-DONE ──► IDLE（执行 login-done，导出 Cookie）
+IDLE ──"#rpa-help"──► HELP ──► IDLE
+```
+
+> **说明：** 能力码 **B/C/F/N**（不含浏览器）时，`record-start` **不会**打开 Chrome，直接进入无浏览器录制模式。仅支持 **`api_call` / `merge_files` / `excel_write` / `word_write` / `python_snippet`** 等纯文件/API 步骤。
+
+---
+
+## AUTOLOGIN-LIST 状态
+
+触发：消息**去掉首尾空白**后等于 `#rpa-autologin-list`。
+
+执行：
+
+```bash
+python3 rpa_manager.py login-list
+```
+
+将输出结果直接展示给用户，回到 IDLE。
+
+---
+
+## AUTOLOGIN 状态
+
+触发：消息以 `#rpa-autologin ` 开头，后跟域名或 URL。
+
+提取规则：
+- 取 `#rpa-autologin ` 之后的部分，去首尾空白，记为 `autologin_target`。
+- 若 `autologin_target` 以 `http` 开头，用 `urlparse` 提取 hostname 并去掉 `www.` 前缀，得到 `autologin_domain`。
+- 否则直接将 `autologin_target` 作为 `autologin_domain`。
+
+执行步骤：
+1. 检查 `~/.openclaw/rpa/sessions/{autologin_domain}/cookies.json` 是否存在。
+   - **不存在** → 告知用户：「未找到 `{autologin_domain}` 的登录会话，请先发送 `#rpa-login <登录页URL>` 保存登录 Cookie。」回到 IDLE。
+   - **存在** → 将 `autologin_domain` 保存到会话变量 `pending_autologin_domain`，回复：「✅ 已找到 `{autologin_domain}` 的登录 Cookie，下次录制或回放时将自动注入。现在可以开始任务：直接告诉我任务名称即可。」
+2. 用户告知任务名后，进入正常 ONBOARDING → DEPS_CHECK → RECORDING 流程，但在 `record-start` 命令中追加 `--autologin {autologin_domain}`。
+
+**`record-start` 带 autologin 时的完整命令：**
+
+```bash
+python3 rpa_manager.py record-start "任务名" --autologin passport.ctrip.com
 ```
 
 ---
 
+## LOGIN 状态
+
+触发：消息以 `#rpa-login ` 开头，后跟登录页 URL。
+
+提取规则：取 `#rpa-login ` 之后的部分，去首尾空白，记为 `login_url`。
+
+执行步骤：
+1. 执行：`python3 rpa_manager.py login-start {login_url}`
+2. 浏览器弹出后，回复用户：「✅ 登录浏览器已打开 → {login_url}。请在浏览器中完成登录（账号/密码/短信/滑块等），完成后发送 `#rpa-login-done`。」
+3. 等待用户发送 `#rpa-login-done`，进入 LOGIN-DONE 状态。
+
+---
+
+## LOGIN-DONE 状态
+
+触发：消息**去掉首尾空白**后等于 `#rpa-login-done`。
+
+执行步骤：
+1. 执行：`python3 rpa_manager.py login-done`
+2. 展示命令输出（Cookie 条数、域名、参考过期时间）。
+3. 回到 IDLE。
+
+---
+
+## HELP 状态
+
+触发：消息**去掉首尾空白**后等于 `#rpa-help`。
+
+执行步骤：
+1. 执行：`python3 rpa_manager.py help`
+2. 将输出完整展示给用户。
+3. 回到 IDLE。
+
+---
+
+---
+
+## RPA-API 状态
+
+触发：消息含 **`#rpa-api`**（不区分大小写）。
+
+### ⛔ 绝对禁止（Agent 必须遵守）
+
+> **禁止直接调用 HTTP API、禁止自己运行任何 Python / httpx / requests / curl、禁止直接返回 API 响应内容。**  
+> `#rpa-api` 的**唯一目标**是把 API 调用**录制成可独立回放的 RPA 脚本**（与 `#rpa`/`#自动化机器人` 的浏览器录制完全平行）。  
+> 无论 API 多简单，都必须走 `record-start` → `record-step api_call` → `record-end` 流水线。  
+> **擅自"帮用户直接取数据"即为违规。**
+
+### 逐字输出以下引导语，不要省略
+
+```
+🤖 OpenClaw RPA 录制器已就绪（API + 浏览器模式）
+
+我将把你的 API 调用和浏览器步骤录制成可重复执行的 RPA 脚本。
+之后日常直接跑脚本——不需要每次让模型现场请求数据。
+
+工作方式：
+1. 我解析你提供的 API 信息 → 密钥直接写入生成脚本（无需额外 export）
+2. 浏览器 / 文件步骤逐一在真实 Chrome 里执行并截图确认
+3. 说"#结束录制" → 编译成完整 Playwright Python 脚本
+
+请发送：任务名称 + 空格 + 能力码（例如：周报数据汇总 F）；两行格式亦可。
+```
+
+### 解析 `###...###` API 声明块
+
+用户可在消息里用 `###` 包裹声明 API，支持两种写法：
+
+**写法 A — 自然语言描述 + API 文档 URL + 密钥**
+```
+###
+任务描述（如：拉取 NVDA 日线数据，保存到桌面的 nvda_time_series_daily.json）
+对应的 API 文档  https://www.alphavantage.co/documentation/#daily
+对应的 API key  YOUR_API_KEY
+###
+```
+
+**写法 B — 直接粘贴 API 文档参数片段 + 密钥**
+```
+###
+API Parameters
+❚ Required: function    → TIME_SERIES_DAILY
+❚ Required: symbol      → IBM
+❚ Required: apikey
+示例: https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&apikey=demo
+对应的 apikey  YOUR_API_KEY
+###
+```
+
+两种写法可混用，块外的普通行是后续的**浏览器 / 文件步骤**。
+
+### AI 处理步骤（按序执行，不允许跳过或合并）
+
+**步骤 0 — 输出上方引导语并等待「任务名 + 能力码」**（格式与下方 **ONBOARDING** 相同：`任务名 能力码` 同行，或两行兼容；若用户在同一条消息里已写明，可直接进入 **DEPS_CHECK**）。
+
+**步骤 1 — 提取块内 API 信息**  
+   - 从 URL 或文档片段中识别：**base_url**、**必填 params**（function、symbol 等）、**密钥字段名**（apikey / token / key 等）  
+   - 如果提供了文档 URL，从 URL 路径 + 参数推断 base_url 与 function；以用户描述补充 symbol 等业务参数  
+   - 用户描述里的保存文件名 → **`save_response_to`** 字段
+
+**步骤 2 — 把密钥写入脚本（用户已提供时）**  
+   - 根据 API 来源**自动命名**变量名（Alpha Vantage → `ALPHAVANTAGE_API_KEY`；OpenAI → `OPENAI_API_KEY`；新浪 → `SINA_API_TOKEN`）  
+   - 在 `record-step` JSON 中：
+     - `params`（或 `headers`）里的密钥字段值使用 **`__ENV:变量名__`** 占位符  
+     - **同时**将真实 key 放入本步的 **`"env"`** 字段：  
+       ```json
+       {
+         "action": "api_call",
+         ...,
+         "params": {"apikey": "__ENV:ALPHAVANTAGE_API_KEY__", ...},
+         "env": {"ALPHAVANTAGE_API_KEY": "用户提供的真实密钥"}
+       }
+       ```
+   - 生成脚本时 `env` 里有真实值 → **密钥直接写入脚本**（如 `'apikey': 'UXZ3BOXOH817CQWS'`），**无需 `export`**，脚本可直接运行  
+   - **不向用户输出** `export ...` 提示；用一句话确认"密钥已写入脚本，回放时无需额外配置"  
+   - 若用户**未提供密钥**，则仅用占位符（不填 `env`），并告知用户运行前需 `export 变量名=…`
+
+**步骤 3 — 收到「任务名 + 能力码」并完成 DEPS_CHECK 后立即开始录制**  
+   - 执行 `record-start "{任务名}" --profile {能力码}`（能力码规则同 ONBOARDING；须先 `deps-check` 通过）  
+   - 等 `✅ Recorder 已就绪` 后，将 `api_call` 步骤作为**第一步**注入（密钥已在 `env` 字段）：
+     ```bash
+     python3 rpa_manager.py record-step '{"action":"api_call","context":"...","base_url":"...","params":{...,"密钥字段":"__ENV:变量名__"},"env":{"变量名":"真实密钥"},"method":"GET","save_response_to":"..."}'
+     ```
+   - 向用户确认 api_call 执行结果（截图 / 文件已写入）
+
+**步骤 4 — 继续处理块外的步骤**  
+   按 RECORDING 状态的单步录制协议处理浏览器步骤、`merge_files` 等，直到用户发 `#结束录制`。
+
+> **没有 `###` 块时**：若消息只有 `#rpa-api` 而无块，输出引导语，询问「任务名 + 能力码」（同行格式 `任务名 F` 或两行，规则同 ONBOARDING）→ **DEPS_CHECK** → **RECORDING**，用户在录制过程中手动下达 `api_call` 步骤即可。
+
 ## ONBOARDING 状态
 
-**逐字输出以下引导语，不要省略：**
+**逐字输出下方引导语**（勿省略能力码表格与报名格式说明）：
 
 ```
 🤖 OpenClaw RPA 实验室已就绪
@@ -138,39 +399,107 @@ IDLE ──"#rpa-list"──► LIST ──► IDLE
 在 AI 协助下，把你在常见网站上的操作、以及需要的本机文件步骤，录制成可反复执行的 RPA 脚本。
 之后日常直接跑脚本即可，不必每次让模型现场点网页——省算力，步骤按录制执行，少受幻觉影响。
 
-工作方式:
-1. 告诉我任务名称
-2. 下达指令 → 我在浏览器里真实执行，截图给你确认
-3. 说"#结束录制" → 我把录制步骤编译成 RPA 脚本
+── 报名（一条消息搞定）──
+格式：  任务名称  能力码
+示例：  供应商对账入表 D
+
+能力码（末尾一个大写字母）：
+  A  只要网页（浏览器自动化）
+  B  只要 Excel 表格（生成/编辑 .xlsx，不依赖本机是否安装 Microsoft Excel）
+  C  只要 Word 文档（生成/编辑 .docx，不依赖本机是否安装 Microsoft Word）
+  D  网页 + Excel
+  E  网页 + Word
+  F  Excel + Word（无网页步骤）
+  G  网页 + Excel + Word
+  N  以上都不需要（例如只做接口请求 + 合并文本文件等）
+
+关于 Excel / Word（白话）：
+• 一般能做：多工作表、写入数据、表头、列宽、冻结首行、隐藏列；Word 里按模板填空、段落、普通表格。
+• 暂不适合：表格宏、数据透视刷新、复杂公式在「没开 Excel」时要当场算准；Word 修订模式、复杂公文域、老版 .doc。
+
+依赖会装在你运行本 skill 时用的同一个 Python 环境里（与 Playwright 一致）。若缺少组件，我会请你确认后再安装。
+
+工作方式（进入录制后）:
+1. 下达指令 → 我在浏览器里真实执行（若任务包含网页），截图给你确认
+2. 说"#结束录制" → 编译成 RPA 脚本
 
 常用指令:
-• 输入"#结束录制" → 生成可独立运行的 Playwright 脚本
+• 输入"#结束录制" → 生成可独立运行的 Playwright 脚本（含 Office 时见 GENERATING 增补规则）
 • 输入"#放弃"     → 关闭浏览器，清空本次录制
 • 多步任务拆成计划后，要进入下一步时可只发:**#继续**、**1** 或 **next**（与「#好」「#下一步」「ok」一样有效）
+• 任务里需要调用 HTTP API？录制时可直接下达 **`api_call`** 步骤，或开头改用 **`#rpa-api`**。
 
 推荐网站：Yahoo 财经、BBC News、Hacker News、GitHub 公开页、Sauce Demo（saucedemo.com）、Wikipedia。
-不建议：含验证码的网站（reCAPTCHA / hCaptcha / Cloudflare），或 DOM 每次渲染都会变化的高度动态 SPA。以后未来可能支持
+不建议：含验证码的网站（reCAPTCHA / hCaptcha / Cloudflare），或 DOM 每次渲染都会变化的高度动态 SPA。
 
-请告诉我，你要录制的第一个任务名称是什么？
+请发送：任务名称 + 空格 + 能力码（例如：供应商对账入表 F）
 ```
+
+---
+
+## DEPS_CHECK（依赖门控，在 ONBOARDING 用户报名之后）
+
+**解析用户消息（支持同行与两行两种格式）**
+
+1. **同行格式**（推荐）：整条消息去空白后，**末尾的单词**（空格分隔的最后一个 token）若为 `A`–`G` 或 `N`（大小写不限，统一大写）→ 能力码；**前面的内容** trim 后 → `{任务名}`。  
+2. **两行格式**（兼容）：按行拆分（去掉首尾空行），最后一行为单字符能力码 → 能力码；此前所有行合并 → `{任务名}`。  
+3. 两种格式均无法解析（找不到合法能力码）→ **不要** `record-start`；回复纠错示例 `供应商对账入表 F`，请用户重发。  
+4. 若用户**在同一轮**触发词消息里已附带格式正确的内容（少见）→ 直接进入本流程，**不要**再索要任务名。
+
+**检查（与 Playwright 同一 `python3`）**
+
+```bash
+python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py deps-check {能力码}
+```
+
+- **退出码 0**：立即执行 **进入录制**（见下节 `record-start … --profile`）。  
+- **非 0**：用**非技术话术**说明缺什么，并**逐字**提示用户：下面只有两个合法回复，**不要**加其它字或标点。
+
+**固定选项（仅此两种，多一字都不算）**
+
+对用户说明：请**整行只发下面二选一**（复制粘贴最稳妥）：
+
+| 你选的回复（去掉首尾空白后须 **完全等于** 该字符串） | 含义 |
+|------------------------------------------------------|------|
+| `同意安装` | 执行 `deps-install`，再 `deps-check`，通过后 `record-start` |
+| `取消` | 中止报名，回 IDLE，不安装 |
+
+- 若用户发了**既不是** `同意安装`**也不是** `取消` 的内容（例如「好的」「ok」「安装吧」）→ **不要**执行 `deps-install`；回复一句：**请只回复 `同意安装`（四字）或 `取消`（二字），整行无其它内容。**  
+- 用户发 `同意安装` →（尚未 `record-start` 则无浏览器可关）执行  
+  `python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py deps-install {能力码}`  
+  → 再 `deps-check` → 通过则 `record-start`；失败则贴 stderr，回 IDLE。  
+- 用户发 `取消` → 回 IDLE。
+
+> **须安装时**：仅当用户消息经去空白后**严格等于** `同意安装` 时，才允许执行 `deps-install`。
 
 ---
 
 ## RECORDING 状态（Recorder 模式 — 有界面真实录制）
 
-### 进入录制（用户提供任务名后）
+### 进入录制（DEPS_CHECK 通过后）
 
-执行：
+执行（**必须带 `--profile`，与报名能力码一致**）：
+
 ```bash
-python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py record-start "{任务名}"
+python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py record-start "{任务名}" --profile {能力码}
 ```
 
-等命令输出 `✅ Recorder 已就绪` 后，回复：
+等命令输出 `✅ Recorder 已就绪` 后，根据能力码回复以下之一：
+
+**含浏览器（A / D / E / G）：**
 ```
 ✅ 已进入录制模式: 「{任务名}」
-🖥️  Chrome 窗口已打开，请注视屏幕——接下来每一步操作都将在这个浏览器中真实执行。
-截图将自动保存，你可以随时核对。
+能力码已写入 recorder_session/task.json（needs_excel / needs_word / needs_browser / capability）。
+🖥️  Chrome 窗口已打开，请发送指令，我将在真实浏览器中执行并截图确认。
 请下达指令，为你拆解任务
+```
+
+**不含浏览器（B / C / F / N）：**
+```
+✅ 已进入录制模式: 「{任务名}」
+能力码已写入 recorder_session/task.json（needs_excel / needs_word / needs_browser / capability）。
+📂 无浏览器模式——本任务仅支持文件 / API 操作，可使用 `excel_write`、`word_write`、`api_call`、`python_snippet`、`merge_files` 等步骤。
+请下达指令
 ```
 
 ---
@@ -247,9 +576,47 @@ python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py record-step '{"
 | `scroll_to` | CSS 选择器 | — | **滚动到指定元素，触发懒加载**，再 wait + snapshot |
 | `dom_inspect` | 容器 CSS 选择器 | — | **调试**：列出容器内子元素结构（**不记入脚本**），用于反推列表/标题的真实选择器 |
 | `extract_text` | CSS 选择器 | 输出文件名 | 提取多元素文本 → 写到 ~/Desktop/文件名 |
+| `api_call` | — | — | **HTTP 调用**（与当前页无关）：二选一 **`url`** 完整地址，或 **`base_url` + `params`** 拼查询串。可选 **`method`**（默认 `GET`）、**`headers`**、**`body`**（POST JSON）、**`save_response_to`**（相对文件名 → 写入 ~/Desktop）。**密钥占位符：** 在 **`params` / `headers` 的字符串值** 中使用 **`__ENV:环境变量名__`**（例如 `"apikey": "__ENV:ALPHAVANTAGE_API_KEY__"`）。**若同时提供 `env` 字段**（如 `{"ALPHAVANTAGE_API_KEY":"真实密钥"}`），密钥将**直接写入生成脚本**，运行时无需 `export`；省略 `env` 则生成 `os.environ.get("变量名", "")`，需手动 `export`。 |
+| `merge_files` | — | — | **桌面文件合并**（纯本地操作，不涉及浏览器）：**`sources`**（文件名列表，均在 ~/Desktop 下）、**`target`**（目标文件名）、可选 **`separator`**（分隔符，默认 `"\n\n"`）。典型用途：把 `api_call` 保存的 JSON 与 `extract_text` 保存的新闻文本合并成一份简报。 |
+| `excel_write` | — | — | **写入 Excel .xlsx**（依赖 openpyxl；**无需安装 Microsoft Excel**）。**`path`** 或 **`value`**：相对文件名（录制时落 **~/Desktop**，生成脚本用 `CONFIG["output_dir"]`）。**`sheet`**：工作表名。**`headers`**：可选，表头字符串数组。**数据行三选一**：① **`rows`**：二维数组，静态数据行；② **`rows_from_json`**：`{"file":"x.json","outer_key":"batches","inner_key":"lines","fields":["f1","f2"],"parent_fields":["batch_id"]}` — 从 Desktop JSON 动态展平嵌套数组（`inner_key`/`parent_fields` 可省略）；③ **`rows_from_excel`**：`{"file":"发票导入_本周.xlsx","sheet":"发票侧","skip_header":true}` — 从另一 xlsx 的指定 sheet 复制数据行。**`freeze_panes`**：可选，如 `"A2"` 冻结首行。**`hidden_columns`**：可选，要隐藏的 **列号（从 1 起）** 列表，如 `[1]` 隐藏 A 列。**`replace_sheet`**：默认 `true`（删除同名表后重建）；`false` 时在已存在表**末尾追加** `rows`。 |
+| `word_write` | — | — | **写入 Word .docx**（依赖 python-docx；**无需安装 Word**）。**`path`** 或 **`value`**：相对文件名。**`paragraphs`**：字符串数组，每个元素一个新段落。**`table`**：可选，`{"headers": [...], "rows": [[...]]}` — 在段落之后插入一张表格（自动应用 "Table Grid" 样式）。**`mode`**：`new`（默认，新建或覆盖）或 `append`（已存在则尾部追加）。 |
+| `python_snippet` | — | — | **通用兜底 action**：当所需操作没有对应的专用 action（`api_call` / `excel_write` / `word_write` / 浏览器类）时，由 AI 生成完整 Python 代码并注入。**`code`**：多行字符串，**录制时立即执行验证**（依赖缺失 → 提示 `deps-install`；文件不存在 → 提示前序步骤；语法/运行时错误 → 返回 traceback）；验证通过后写入 `code_block`，之后每次回放在 `run()` 的 `try` 块内执行。**AI 生成 `code` 时必须遵守下方「执行环境」约束。** |
 | `wait` | — | 毫秒数 | 等待 |
 
 > `extract_text` 支持额外的 `"limit": N` 字段，只取前 N 条。
+
+---
+
+### `python_snippet` 执行环境（AI 生成代码时的约束）
+
+> 完整设计原理、验证机制、可用符号表及 AP 对账案例示例见 **[articles/python-snippet-design.md](articles/python-snippet-design.md)**。
+
+> **设计原则**：已有专用 action 的操作**必须**用专用 action；只有专用 action 无法覆盖的逻辑（计算、多源聚合、自定义格式化等）才使用 `python_snippet`。
+
+**录制时 & 回放时可用的符号：**
+
+| 符号 | 类型 | 说明 |
+|------|------|------|
+| `CONFIG["output_dir"]` | `Path` | 输出目录（录制时为 `~/Desktop`，回放时按配置）；**所有文件路径必须通过此前缀构造** |
+| `CONFIG["task_name"]` | `str` | 任务名 |
+| `Path` | `pathlib.Path` | 路径操作 |
+| `json` | module | 标准库 json |
+| `os` | module | 标准库 os |
+| `re` | module | 标准库 re |
+| `datetime` | module | 标准库 datetime |
+| `load_workbook` | openpyxl | 读已有 xlsx（需能力 B/F）|
+| `Workbook` | openpyxl | 新建 xlsx |
+| `get_column_letter` | openpyxl | 列号转字母 |
+| `Document` | python-docx | 读写 docx（需能力 C/F）|
+| `page` | Playwright Page | 浏览器页对象；纯文件步骤值为 `None`，**不可在非浏览器步骤中调用** |
+
+**AI 生成代码的检查清单（每次生成前必须过一遍）：**
+
+1. 所有文件路径用 `CONFIG["output_dir"] / "文件名"` 构造，**禁止硬编码 `~/Desktop`**
+2. 引用了 `load_workbook` / `Workbook` → 确认任务能力码包含 B 或 F
+3. 引用了 `Document` → 确认任务能力码包含 C 或 F
+4. 读取前序步骤生成的文件（如 `reconcile_raw.json`）→ 在代码前加 `assert` 或 `if not ... .exists(): raise FileNotFoundError(...)`，让录制时验证即时失败并给出明确提示
+5. 不使用任何未在上表列出的第三方库（如 pandas、numpy）；若必须使用，先用 `pip install` 安装并在 SKILL `requirements.txt` 中记录
 
 > **字段名（写入文件时显示）：** 可选 `"field"` 或 `"field_name"`（如 `"片名"`、`"rating"`、`plot`）。输出排版为 `【字段：{名称}】` + 分隔线 + 正文；未填时沿用 `context`。
 
@@ -260,6 +627,62 @@ python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py record-step '{"
 ```json
 {"action":"select_option","target":"[data-test=\"product-sort-container\"]","value":"hilo","context":"按价格从高到低排序"}
 ```
+
+### 典型场景 1：行情 + 新闻页 + 本地简报（浏览器 + API + 文件）
+
+**目标：** 同一任务里既有 **REST 行情数据**，又有 **浏览器里新闻列表**，再 **合并进一份本地简报**（`extract_text` 与/或 `api_call` 的 `save_response_to`）。
+
+**用户提示词 / 助手侧清单（流程含 `api_call` 时）：** 向用户确认或根据 API 文档推断 **接口 base URL**、**必填查询/Body 字段**、**若鉴权在 Header 则 Header 名**，以及 **每个密钥对应的变量名**（如 `ALPHAVANTAGE_API_KEY`）。**密钥写入策略：** 用户在 `###` 块中已提供真实 key → 放入 `record-step` 的 `"env"` 字段，生成脚本时密钥**直接写入脚本**，无需 `export`；未提供 key → 用 `__ENV:变量名__` 占位，回放前需手动 `export`。
+
+**推荐顺序（可按站点调整）：**
+
+1. **`api_call`** — 拉取日线 OHLCV（或任意文档化接口），落盘便于回放脚本离线对照或二次处理。密钥已在 `env` 字段提供时，直接写入脚本；否则用 `__ENV:变量名__` 占位。
+2. **`goto`** — 打开财经站新闻/行情页（如 Yahoo Finance 标的页）。
+3. **渐进式探测** — `scroll` / `wait` / `snapshot`（必要时 `dom_inspect`），直到新闻列表选择器可靠。
+4. **`extract_text`** — 带**容器前缀**的选择器 + `limit`，写入 **`value`** 为同一简报文件名（多段会**自动追加**，并带 `【字段：…】`）。
+
+**`api_call` 示例 A — 密钥直接写入脚本（用户在 `###` 块提供了真实 key）：**
+
+```json
+{
+  "action": "api_call",
+  "context": "Alpha Vantage 日线行情",
+  "base_url": "https://www.alphavantage.co/query",
+  "params": {
+    "function": "TIME_SERIES_DAILY",
+    "symbol": "IBM",
+    "outputsize": "compact",
+    "datatype": "json",
+    "apikey": "__ENV:ALPHAVANTAGE_API_KEY__"
+  },
+  "env": {"ALPHAVANTAGE_API_KEY": "用户提供的真实密钥"},
+  "method": "GET",
+  "save_response_to": "ibm_time_series_daily.json"
+}
+```
+
+生成脚本中的对应行变为：`'apikey': '用户提供的真实密钥'`（直接可运行，无需 `export`）。
+
+**`api_call` 示例 B — 密钥通过环境变量引用（用户未提供 key，仅用占位符）：**
+
+```json
+{
+  "action": "api_call",
+  "context": "Alpha Vantage 日线行情",
+  "base_url": "https://www.alphavantage.co/query",
+  "params": {
+    "function": "TIME_SERIES_DAILY",
+    "symbol": "IBM",
+    "outputsize": "compact",
+    "datatype": "json",
+    "apikey": "__ENV:ALPHAVANTAGE_API_KEY__"
+  },
+  "method": "GET",
+  "save_response_to": "ibm_time_series_daily.json"
+}
+```
+
+生成脚本中的对应行变为：`'apikey': os.environ.get("ALPHAVANTAGE_API_KEY", "")`，回放前需 `export ALPHAVANTAGE_API_KEY=…`。
 
 ---
 
@@ -421,7 +844,7 @@ python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py record-step '{
    
    已知限制:
    • [如涉及登录，提醒用户手动登录后再运行]
-   • [其他从录制内容识别出的注意事项]
+   • [其他从录制内容识别出的注意事项；**不要**提及 API 密钥或 export 命令——脚本启动时已自动检查并提示]
    
    以后执行这个 RPA：不确定有哪些任务时先发 **`#rpa-list`** 查看 **当前可用的已录制任务**；再发 **`#rpa-run:{任务名}`**（新开对话）或 **`#运行:{任务名}`**（仍在本对话）。
    ```
@@ -430,6 +853,11 @@ python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py record-step '{
    - `record-end` 成功后，`rpa/{filename}.py` 已由 `recorder_server` 的 `_build_final_script()` 从真实录制的 `code_block` **逐段拼装**，与 `recorder_session/script_log.py` 同源。  
    - **不要**根据「任务描述」再生成一份完整 Playwright 脚本去覆盖或替代上述文件；那会丢掉录制器保证的选择器与 `evaluate` 语义，且易重新引入 `get_by_*` / `networkidle` 等与流水线不一致的写法。  
    - 若用户要改行为：**优先**用 `record-start` 重录有问题的步骤后再次 `record-end`；仅当改动极小时，可在现有 `rpa/*.py` 上**局部**修改，且须与 [playwright-templates.md](playwright-templates.md) 中骨架、`_EXTRACT_JS`、`_wait_for_content` 风格一致。
+
+5. **Excel / Word 与生成脚本结构（已定稿）**  
+   - **主路径（推荐）**：录制阶段通过 **`record-step` 的 `excel_write` / `word_write`** 完成 Office 操作；`record-end` 后代码已由 `recorder_server._build_final_script()` **与 Playwright 步骤写入同一 `rpa/{filename}.py`**（在 `async def run()` 的 `try` 块内，与 `api_call`、`merge_files` 同级），顶部按需注入 `openpyxl` / `docx` 的 import。**不再**单独维护 `rpa/*_office.py`。  
+   - **兜底（仅当未录到 Office 步骤）**：若 `task.json` 中 `needs_excel` / `needs_word` 为 `true` 但录制 JSONL 中无 `excel_write`/`word_write`，且用户在对话里已明确表结构/路径，允许 Agent 在 `record-end` 成功后 **仅向该 `.py` 文件末尾追加** 补充函数或 `main` 调用，**不得删除或改写**录制器已生成的段落。  
+   - **若信息不足**：不要编造业务数据；在成功提示中列出待补 CONFIG/表头。
 
 ---
 
@@ -495,10 +923,10 @@ python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py record-step '{
 
 ```
 用户：#自动化机器人
-系统：🤖 OpenClaw RPA 实验室已就绪 ... 请告诉我任务名称？
+系统：🤖 OpenClaw RPA 实验室已就绪 ... 请发送：任务名称 + 空格 + 能力码
 
-用户：每日资讯采集
-系统：（执行 record-start）✅ Chrome 窗口已打开...
+用户：每日资讯采集 A
+系统：（deps-check A → record-start … --profile A）✅ Chrome 窗口已打开（含浏览器能力 A）...
 
 用户：打开 example-news.com，搜索"AI"，把结果页前 5 条标题存到桌面 titles.txt
 系统：
@@ -555,7 +983,7 @@ python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py record-step '{
   `rpa_manager.py plan-set '<json>'` | `plan-next` | `plan-status`
 
   **Recorder 模式（推荐）：**
-  `rpa_manager.py record-start <task>` | `record-step '<json>'` | `record-status` | `record-end [--abort]`
+  `rpa_manager.py record-start <task> [--profile A-N]` | `deps-check <A-N>` | `deps-install <A-N>` | `record-step '<json>'` | `record-status` | `record-end [--abort]`
 
   **通用：**
   `rpa_manager.py run <task>` | `list`（对话中也可发 **`#rpa-list`** 触发 LIST 状态）

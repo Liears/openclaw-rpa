@@ -11,7 +11,7 @@ metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 
 # openclaw-rpa
 
-**Example automations** (illustrative; **obey each site’s terms of use and applicable law**): **e‑commerce login & shopping**; **Yahoo Finance** stock quotes / news; movie sites **reviews & ratings** in one scripted run.
+**Example automations** (illustrative; **obey each site’s terms of use and applicable law**): **e‑commerce login & shopping**; **Scenario 1** (below) **quotes API + news page + local brief**; **Yahoo Finance** browser-only quotes / news; movie sites **reviews & ratings** in one scripted run; **AP reconciliation** (GET-only mock API, local Excel vs invoices, **Word table** report — no ERP submit) — **[articles/scenario-ap-reconciliation.md](articles/scenario-ap-reconciliation.md)** (Chinese).
 
 ## What this skill does
 
@@ -31,6 +31,7 @@ Output is **ordinary Python**; after **`record-end`** you may still patch helper
 | Goal | What to send |
 |------|----------------|
 | **Start recording** a new flow | `#automation robot`, `#RPA`, `#rpa`, or mention **Playwright automation** |
+| **Record a flow with an HTTP API** | `#rpa-api` (describe the API or paste an API doc param block `###...###` in the message) |
 | **List saved tasks** | `#rpa-list` |
 | **Run a saved task** (e.g. new chat) | `#rpa-run:{task name}` |
 | **Run in this chat** | `run:{task name}` |
@@ -64,6 +65,8 @@ In chat, prefer **`#rpa-list`** → **`#rpa-run:your-task-name`** so names match
 |---------|---------|
 | **Browser only** | **E‑commerce:** login → browse → cart/checkout (`rpa/电商网站购物*.py` style). **Yahoo Finance:** quotes / headlines. **Movies:** aggregate **reviews & ratings**. |
 | **Browser then files** | Same flow, plus **`extract_text`** when asked. |
+| **Browser + HTTP API + files** | **Scenario 1:** **`api_call`** (e.g. [Alpha Vantage TIME_SERIES_DAILY](https://www.alphavantage.co/documentation/#daily)) saves JSON/text locally, then **`goto` + `extract_text`** for a brief. |
+| **HTTP API + Excel + Word (browser optional)** | **AP reconciliation:** mock **GET** batches, local sheets, **no submit**; output **.docx** with tables — see **[articles/scenario-ap-reconciliation.md](articles/scenario-ap-reconciliation.md)**. |
 | **Files only in script** | After **`record-end`**, add folder cleanup—**no URL** for that block. |
 
 ## Recommended sites for getting started
@@ -106,13 +109,14 @@ If logs show `error=LLM request timed out`, `model=gemini-...`, `provider=google
 
 ## Trigger detection
 
-On each user message, **check in this order** (**first match wins**; do not skip order or `#rpa-list` may be mistaken for ONBOARDING because it contains `#rpa`):
+On each user message, **check in this order** (**first match wins**; do not skip order or `#rpa-list` may be mistaken for ONBOARDING because it contains `#rpa`; `#rpa-api` must be checked before the generic `#rpa`):
 
 | Order | Condition | State |
 |:-----:|-----------|--------|
 | 1 | Message is a **RUN** (see table below) | RUN |
 | 2 | After trim, message **equals** `#rpa-list` (**case-insensitive**, e.g. `#RPA-LIST`) | LIST |
-| 3 | Message contains **#automation robot** OR **#RPA** OR **#rpa** (case-insensitive for `#RPA` / `#rpa`) | ONBOARDING |
+| 3 | Message contains **`#rpa-api`** (case-insensitive) | RPA-API |
+| 4 | Message contains **#automation robot** OR **#RPA** OR **#rpa** (case-insensitive for `#RPA` / `#rpa`) | ONBOARDING |
 
 Intercept and handle these; do not run the raw user task outside this skill.
 
@@ -130,14 +134,123 @@ Intercept and handle these; do not run the raw user task outside this skill.
 ## State machine
 
 ```
-IDLE ──trigger──► ONBOARDING ──task name──► RECORDING ──end recording──► GENERATING ──► IDLE
-                                        │abort
-                                        └──────────────────────────────► IDLE
+IDLE ──trigger──► ONBOARDING (show signup rules)
+                    │
+                    └──one user message ("task name LETTER" or two-line)──► DEPS_CHECK
+                                                                                      │
+                    ┌───────────────────────────────────────────────────────────────┘
+                    │  python3 rpa_manager.py deps-check <letter>
+                    ├─failed + user sends CANCEL (fixed token)──────────────────────► IDLE (abort)
+                    ├─failed + user sends AGREE──deps-install──deps-check again───────┐
+                    └─passed ──────────────────────────────────────────────────────┤
+                                                                                       ▼
+                                                                                RECORDING
+RECORDING ──end recording──► GENERATING ──► IDLE
+    │abort
+    └────────────────────────────────────► IDLE
+IDLE ──"#rpa-api"──► RPA-API ──parsed──► (same task+capability rules)──► DEPS_CHECK ──► RECORDING …
 IDLE ──"#rpa-run:{task}" / "run:{task}"──► RUN ──► IDLE
 IDLE ──"#rpa-list"──► LIST ──► IDLE
 ```
 
+> **Note:** For codes **B / C / F**, **`record-start` still opens Chrome** (Playwright). Users may ignore the window and use **`api_call`**, **`merge_files`**, **`excel_write`**, **`word_write`**, etc.
+
 ---
+
+---
+
+## RPA-API state
+
+Triggered by: message contains **`#rpa-api`** (case-insensitive).
+
+### ⛔ Absolute prohibitions (agent MUST enforce)
+
+> **Do NOT call the HTTP API yourself. Do NOT run Python / httpx / requests / curl. Do NOT return the API response to the user.**  
+> The **sole purpose** of `#rpa-api` is to **record the API call into a replayable RPA script** — exactly like `#rpa` / `#automation robot` does for browser actions.  
+> No matter how trivial the API call looks, it **must** go through `record-start` → `record-step api_call` → `record-end`.  
+> **Fetching data "on behalf of the user" without recording is a violation.**
+
+### Output the following verbatim — do not skip
+
+```
+🤖 OpenClaw RPA recorder ready (API + browser mode)
+
+I'll record your API call and browser steps into a replayable RPA script.
+Future runs just execute the script — no model needed to fetch data every time.
+
+How it works:
+1. I parse the API info you provided → key is written directly into the script (no export needed)
+2. Browser / file steps run in a real Chrome window with screenshots for confirmation
+3. Say "end recording" → compile into a standalone Playwright Python script
+
+Send one message: line 1 = task name, line 2 = capability letter **A–G** or **N** (see `#automation robot` / `#RPA` onboarding table).
+```
+
+### Parsing the `###...###` API declaration block
+
+Wrap API info in `###` markers. Two accepted formats:
+
+**Format A — natural language + API doc URL + key**
+```
+###
+Task description (e.g.: fetch NVDA daily OHLCV, save to Desktop as nvda_time_series_daily.json)
+API docs  https://www.alphavantage.co/documentation/#daily
+API key   YOUR_API_KEY
+###
+```
+
+**Format B — paste API doc parameter snippet + key**
+```
+###
+API Parameters
+❚ Required: function    → TIME_SERIES_DAILY
+❚ Required: symbol      → IBM
+❚ Required: apikey
+Example: https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&apikey=demo
+apikey  YOUR_API_KEY
+###
+```
+
+Both formats can be mixed. Lines **outside** the block are the subsequent **browser / file steps**.
+
+### Agent steps (in order — none may be skipped or merged)
+
+**Step 0 — Output the greeting and wait for “task name + capability”** (same format as **ONBOARDING**: `task name LETTER` on one line, or two-line compatible). If the user already included it in the same message as `#rpa-api`, go straight to **DEPS_CHECK**.
+
+**Step 1 — Extract API info from the block**  
+   - Identify: **base_url**, **required params** (function, symbol, …), **key field name** (apikey / token / key / …)  
+   - If a doc URL is given, infer base_url + function from URL path + params; fill business params (symbol, etc.) from the user description  
+   - Save filename from user description → **`save_response_to`**
+
+**Step 2 — Embed the key into the script (when provided)**  
+   - Name the env var from the API provider (examples: Alpha Vantage → `ALPHAVANTAGE_API_KEY`; OpenAI → `OPENAI_API_KEY`; custom → `MY_API_TOKEN`)  
+   - In the `record-step` JSON:
+     - Use **`__ENV:VAR_NAME__`** placeholder in `params` / `headers`  
+     - **Also** put the real key in the step's **`"env"`** field:  
+       ```json
+       {
+         "action": "api_call",
+         ...,
+         "params": {"apikey": "__ENV:ALPHAVANTAGE_API_KEY__", ...},
+         "env": {"ALPHAVANTAGE_API_KEY": "user-supplied-real-key"}
+       }
+       ```
+   - When `env` is present, the code generator writes the key **directly into the script** (e.g. `'apikey': 'UXZ3BOXOH817CQWS'`) — **no `export` required** for replay  
+   - **Do NOT** output an `export VAR=…` instruction; instead confirm: "Key written directly into the script — no setup needed before replay."  
+   - If the user **did not** supply a key, omit `env`, use placeholder only, and tell the user they'll need `export VAR_NAME=…` before running
+
+**Step 3 — After “task name + capability” and DEPS_CHECK, start recording**  
+   - Run `record-start "{task name}" --profile {LETTER}` (same capability rules as ONBOARDING; `deps-check` must pass first)  
+   - After `✅ Recorder ready`, inject `api_call` as the **first step** (key in the `env` field):
+     ```bash
+     python3 rpa_manager.py record-step '{"action":"api_call","context":"...","base_url":"...","params":{...,"key_field":"__ENV:VAR_NAME__"},"env":{"VAR_NAME":"real_key"},"method":"GET","save_response_to":"..."}'
+     ```
+   - Confirm result to the user (screenshot / file written)
+
+**Step 4 — Continue with steps outside the block**  
+   Follow the RECORDING single-step protocol for browser steps, `merge_files`, etc., until the user sends `#end-recording` / `end recording`.
+
+> **No `###` block:** if the message is only `#rpa-api` with no block, output the greeting, ask for task name + capability (`task name LETTER` on one line, or two-line; same as ONBOARDING) → **DEPS_CHECK** → **RECORDING** — the user issues `api_call` steps manually.
 
 ## ONBOARDING
 
@@ -149,39 +262,105 @@ IDLE ──"#rpa-list"──► LIST ──► IDLE
 With AI help, we’ll record what you do in a real browser (and local file steps if you need them) and compile it into an RPA script you can run again and again.
 Later runs use that script directly—no need for the model to drive every click—saving compute and keeping steps consistent (vs. LLM hallucinations on fragile actions).
 
-How it works:
-1. Give me a task name
-2. Give instructions → I run the real steps in the browser and show screenshots
-3. Say "end recording" → I compile the recorded steps into an RPA script
+── Sign-up (one message) ──
+Format:  Task name  Capability code
+Example: Supplier reconciliation sheet F
+
+Capability code (one trailing uppercase letter):
+  A  Browser only
+  B  Excel only (.xlsx via openpyxl; no Microsoft Excel app required)
+  C  Word only (.docx via python-docx; no Microsoft Word app required)
+  D  Browser + Excel
+  E  Browser + Word
+  F  Excel + Word (no web steps in the task)
+  G  Browser + Excel + Word
+  N  None of the above (e.g. API + merge text files only)
+
+Excel / Word (plain language):
+• Usually OK: multiple sheets, data, headers, column width, freeze top row, hidden columns; Word templates, paragraphs, simple tables.
+• Not a good fit: macros, pivot refresh, heavy formula evaluation without Excel; Word track-changes, complex fields, legacy .doc.
+
+Dependencies install into the **same Python** you use for Playwright / this skill. If something is missing, I'll ask before installing.
+
+After recording starts:
+1. Send instructions → I run real browser steps when the flow uses the web, with screenshots.
+2. Say "end recording" → compile the RPA script.
 
 Common commands:
-• "end recording" → generate the Playwright Python script
+• "end recording" → generate the script (see GENERATING for Office append rules)
 • "abort" → close the browser and discard this session
-• For multi-step plans, to go on you may send: **continue**, **1**, or **next** (same as "ok", "y", "go")
+• Multi-step plans: **continue**, **1**, **next** (same as "ok", "y", "go")
+• HTTP API: **`api_call`** during recording, or start with **`#rpa-api`**.
 
-Good sites to try: Yahoo Finance, BBC News, Hacker News, GitHub public pages, Sauce Demo (saucedemo.com), Wikipedia.
-Not recommended: sites with CAPTCHAs (reCAPTCHA / hCaptcha / Cloudflare), or heavily dynamic SPAs where the DOM changes between every render. May be supported in the future.
+Good sites: Yahoo Finance, BBC News, Hacker News, GitHub public pages, Sauce Demo (saucedemo.com), Wikipedia.
+Not recommended: CAPTCHAs, or highly dynamic SPAs.
 
-What is the first task name you want to record?
+Send: task name + space + capability letter (e.g. "Supplier reconciliation sheet F")
 ```
+
+---
+
+## DEPS_CHECK (after onboarding signup)
+
+**Parse the user message**
+
+1. **Single-line format** (preferred): after trimming, if the **last whitespace-separated token** is a single character `A`–`G` or `N` (case-insensitive → uppercase) → capability; **everything before it** trimmed → `{task name}`.  
+2. **Two-line format** (compatible): split into lines, last non-empty line is single letter → capability; all previous lines joined → `{task name}`.  
+3. If neither format yields a valid capability letter → do **not** `record-start`; show corrected example `Supplier reconciliation sheet F` and ask the user to resend.  
+4. If the user already included the info in the **same trigger message**, skip re-asking.
+
+**Check (same `python3` as Playwright)**
+
+```bash
+python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py deps-check {LETTER}
+```
+
+- **Exit 0** → start recording (below) with `--profile`.  
+- **Non-zero** → explain what’s missing in plain language, then tell the user there are **exactly two** allowed replies — nothing else counts.
+
+**Fixed options only** (verbatim; copy-paste recommended)
+
+After **trimming leading/trailing whitespace**, the message must be **exactly** one of (ASCII **case-insensitive**):
+
+| Reply | Meaning |
+|-------|---------|
+| `AGREE` | Run `deps-install {LETTER}` → `deps-check` again → `record-start` if OK |
+| `CANCEL` | Abort signup, return to IDLE, do not install |
+
+- If the user sends anything else (`ok`, `yes install`, `go ahead`, …) → **do not** run `deps-install`. Reply: **Send only `AGREE` or `CANCEL` on its own line (no extra words or punctuation).**  
+- On **`AGREE`** (any casing) → run `deps-install` → `deps-check` → `record-start` or show stderr.  
+- On **`CANCEL`** → IDLE.
+
+Do **not** run `deps-install` unless the trimmed message equals **`AGREE`** ignoring ASCII case.
 
 ---
 
 ## RECORDING (Recorder mode — headed browser)
 
-### Start recording (after user gives task name)
+### Start recording (after DEPS_CHECK passes)
 
-Run:
+Run (**always pass `--profile`** matching the signup letter):
+
 ```bash
-python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py record-start "{task name}"
+python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py record-start "{task name}" --profile {LETTER}
 ```
 
-When the command prints `✅ Recorder ready`, reply:
+When the command prints `✅ Recorder ready`, reply one of the following based on the capability:
+
+**If capability includes a browser (A / D / E / G):**
 ```
 ✅ Recording started: 「{task name}」
-🖥️  Chrome is open — watch the window; each step runs for real.
-Screenshots are saved automatically.
+Capability saved in recorder_session/task.json (needs_excel / needs_word / needs_browser / capability).
+🖥️  Chrome is now open — send your first instruction and I will run it in the real browser with a screenshot.
 Send your first instruction (I can split multi-step work).
+```
+
+**If capability has NO browser (B / C / F / N):**
+```
+✅ Recording started: 「{task name}」
+Capability saved in recorder_session/task.json (needs_excel / needs_word / needs_browser / capability).
+📂 No browser — this task uses file / API steps only. Use `excel_write`, `word_write`, `api_call`, `python_snippet`, or `merge_files`.
+Send your first instruction.
 ```
 
 ---
@@ -258,6 +437,11 @@ python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py record-step '{"
 | `scroll_to` | CSS | — | **Scroll element into view (lazy-load)**, then `wait` + `snapshot` |
 | `dom_inspect` | Container CSS | — | **Debug:** list child structure under a container (**not logged** to script); use to infer list/title selectors |
 | `extract_text` | CSS | output filename | Text from multiple elements → `~/Desktop/<filename>` |
+| `api_call` | — | — | **HTTP** (independent of the page): either full **`url`**, or **`base_url` + `params`**. Optional **`method`** (default `GET`), **`headers`**, **`body`** (POST JSON), **`save_response_to`** (relative path under `~/Desktop`). **Secrets:** in `params` or `headers` string values, use **`__ENV:ENV_VAR_NAME__`** (e.g. `"apikey": "__ENV:ALPHAVANTAGE_API_KEY__"`). **If the step also has an `"env"` field** (e.g. `{"ALPHAVANTAGE_API_KEY":"real_key"}`), the key is **written directly into the generated script** — no `export` needed for replay; omitting `env` generates `os.environ.get("VAR", "")` and requires `export` before replay. |
+| `merge_files` | — | — | **Merge Desktop files** (pure local, no browser): **`sources`** (list of filenames under `~/Desktop`), **`target`** (output filename), optional **`separator`** (default `"\n\n"`). Typical use: combine an `api_call` JSON with an `extract_text` news file into a single brief. |
+| `excel_write` | — | — | **Write `.xlsx`** (openpyxl; **no Microsoft Excel required**). **`path`** or **`value`**: relative filename (recording writes under **~/Desktop**; generated script uses `CONFIG["output_dir"]`). **`sheet`**: worksheet name. **`headers`**: optional list of header strings. **Row data — pick one**: ① **`rows`**: static 2-D array of cell values; ② **`rows_from_json`**: `{"file":"x.json","outer_key":"batches","inner_key":"lines","fields":["f1","f2"],"parent_fields":["batch_id"]}` — dynamically flatten a nested JSON array from Desktop (`inner_key`/`parent_fields` optional); ③ **`rows_from_excel`**: `{"file":"发票导入_本周.xlsx","sheet":"发票侧","skip_header":true}` — copy data rows from another xlsx sheet. **`freeze_panes`**: optional e.g. `"A2"`. **`hidden_columns`**: optional list of **1-based** column indexes to hide (e.g. `[1]` hides column A). **`replace_sheet`**: default `true` (delete same-named sheet then recreate); `false` appends **`rows`** at the end of an existing sheet. |
+| `word_write` | — | — | **Write `.docx`** (python-docx; **no Word app required**). **`path`** or **`value`**: relative filename. **`paragraphs`**: list of strings (one paragraph each). **`table`**: optional — `{"headers": [...], "rows": [[...]]}` inserts a table after paragraphs (auto-applies "Table Grid" style). **`mode`**: `new` (default) or `append` (append to existing file). |
+| `python_snippet` | — | — | **Inject Python code directly into the generated script.** **`code`**: multi-line string executed inside `async def run()`'s `try` block at the same level as `api_call`/`excel_write`/`word_write`; can access `page`, `CONFIG`, `load_workbook`, `Document`, etc. Use for **computed logic** (matching loops, data transforms) where `rows` cannot be statically provided at record time. **No side-effects during recording** — only writes the `code_block`. |
 | `wait` | — | milliseconds | Wait |
 
 > `extract_text` supports an optional **`"limit": N`** — only the first **N** matches.
@@ -271,6 +455,62 @@ python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py record-step '{"
 ```json
 {"action":"select_option","target":"[data-test=\"product-sort-container\"]","value":"hilo","context":"Sort by price high to low"}
 ```
+
+### Scenario 1: quotes + news page + local brief (browser + API + file)
+
+**Goal:** One workflow with **REST quote data**, a **browser news list**, and a **local brief** (`extract_text` and/or `api_call` **`save_response_to`**).
+
+**User prompt checklist (when the flow includes `api_call`):** Ask the human (or infer from the API docs) for **base URL**, **required query/body fields**, **header names** if auth is header-based, and **which env var name** will hold each secret (e.g. `ALPHAVANTAGE_API_KEY`). **Key embedding strategy:** if the user supplied the real key → put it in the step's `"env"` field; the code generator writes it **directly into the script** (no `export` needed). If no key provided → use `__ENV:VAR__` placeholder only and tell the user to `export` before replay.
+
+**Suggested order (adjust per site):**
+
+1. **`api_call`** — fetch daily OHLCV (or any documented endpoint); save JSON for replay/offline use. Include `"env"` if key is available — key is embedded in script.
+2. **`goto`** — open a finance news page (e.g. Yahoo Finance symbol page).
+3. **Progressive probing** — `scroll` / `wait` / `snapshot` (and `dom_inspect` if needed) until a stable news selector exists.
+4. **`extract_text`** — **scoped** selector + `limit`; reuse the same **`value`** filename to **append** sections with **`【字段：…】`**.
+
+**`api_call` example A — key written directly into script (user supplied key in `###` block):**
+
+```json
+{
+  "action": "api_call",
+  "context": "Alpha Vantage daily OHLCV",
+  "base_url": "https://www.alphavantage.co/query",
+  "params": {
+    "function": "TIME_SERIES_DAILY",
+    "symbol": "IBM",
+    "outputsize": "compact",
+    "datatype": "json",
+    "apikey": "__ENV:ALPHAVANTAGE_API_KEY__"
+  },
+  "env": {"ALPHAVANTAGE_API_KEY": "user-supplied-real-key"},
+  "method": "GET",
+  "save_response_to": "ibm_time_series_daily.json"
+}
+```
+
+Generated script contains `'apikey': 'user-supplied-real-key'` — runs directly, no `export` needed.
+
+**`api_call` example B — key via env var (no key provided):**
+
+```json
+{
+  "action": "api_call",
+  "context": "Alpha Vantage daily OHLCV",
+  "base_url": "https://www.alphavantage.co/query",
+  "params": {
+    "function": "TIME_SERIES_DAILY",
+    "symbol": "IBM",
+    "outputsize": "compact",
+    "datatype": "json",
+    "apikey": "__ENV:ALPHAVANTAGE_API_KEY__"
+  },
+  "method": "GET",
+  "save_response_to": "ibm_time_series_daily.json"
+}
+```
+
+Generated script contains `'apikey': os.environ.get("ALPHAVANTAGE_API_KEY", "")` — requires `export ALPHAVANTAGE_API_KEY=…` before replay.
 
 ---
 
@@ -432,7 +672,7 @@ Execute in order — **do not skip steps**:
 
    Known limitations:
    • [If login was involved, remind user to log in before replay]
-   • [Other caveats inferred from the recording]
+   • [Other caveats inferred from the recording; **do NOT** mention API keys or `export` commands — the generated script already checks for missing env vars at startup and prints instructions]
 
    To run this RPA later: if unsure what’s registered, send **`#rpa-list`** first to see **which recorded tasks are available**; then **`#rpa-run:{task name}`** (new chat) or **`run:{task name}`** (same chat).
    ```
@@ -441,6 +681,11 @@ Execute in order — **do not skip steps**:
    - After successful `record-end`, `rpa/{filename}.py` is assembled by `recorder_server` `_build_final_script()` from real `code_block` segments — same source as `recorder_session/script_log.py`.
    - **Do not** generate a full replacement Playwright script from the task description alone; that drops recorder-validated selectors and `evaluate` semantics and often reintroduces `get_by_*` / `networkidle` patterns that diverge from the pipeline.
    - For behavior changes: **prefer** `record-start` and re-record the bad steps, then `record-end`; for tiny edits, patch **`rpa/*.py` locally** only, staying consistent with [playwright-templates.md](playwright-templates.md) (`CONFIG`, `_EXTRACT_JS`, `_wait_for_content`, `page.locator` + `page.evaluate`).
+
+5. **Excel / Word — finalized layout**
+   - **Primary path:** Use **`record-step`** **`excel_write`** / **`word_write`** during recording. After `record-end`, `recorder_server._build_final_script()` emits **one** `rpa/{filename}.py` with Office code **inside** `async def run()` (same `try` as Playwright / `api_call` / `merge_files`) and adds **top-level** `openpyxl` / `docx` imports when needed. **No** separate `rpa/*_office.py`.
+   - **Fallback only:** If `task.json` flags Excel/Word but the recording has no `excel_write`/`word_write` steps, and the user gave explicit structure in chat, the agent may **append** supplemental code **only at the end** of that `.py` file — **never** replace recorder output.
+   - **If details are missing:** do not invent business data; list required CONFIG / headers in the success message.
 
 ---
 
@@ -506,10 +751,10 @@ Because recording uses real CSS from a headed browser:
 
 ```
 User: #RPA
-Agent: (ONBOARDING) … What is the task name?
+Agent: (ONBOARDING) … sign-up prompt…
 
-User: Daily news scrape
-Agent: (record-start) ✅ Chrome open…
+User: Daily news scrape A
+Agent: (deps-check A → record-start … --profile A) ✅ Chrome open…
 
 User: Open example-news.com, search "AI", save the top 5 titles from the results to Desktop titles.txt
 Agent:
@@ -567,7 +812,7 @@ Agent: 📋 Listing… (shows `rpa_manager.py list` output)
   `plan-set '<json>'` | `plan-next` | `plan-status`
 
   **Recorder (recommended):**  
-  `record-start <task>` | `record-step '<json>'` | `record-status` | `record-end [--abort]`
+  `record-start <task> [--profile A-N]` | `deps-check <A-N>` | `deps-install <A-N>` | `record-step '<json>'` | `record-status` | `record-end [--abort]`
 
   **General:**  
   `run <task>` | `list` (in chat, **`#rpa-list`** triggers LIST)

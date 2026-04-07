@@ -42,7 +42,48 @@ https://github.com/user-attachments/assets/8da98e97-415c-4a60-b412-9a30ea87551a
 2. In the row of tabs under the stock price (same row as **Summary**), click **News** for this symbol—the tab next to **Summary**. Wait until the news list has loaded.
 3. Save the **top 5** news headlines (**title text only**) to **`YahooNews.txt`** on the **Desktop**.
 
-### 3. OpenClaw + Feishu/Lark: `#rpa-list`, `#rpa-run`, and scheduled run
+<a id="api-quotes-news-brief"></a>
+
+### 3. Quotes API + news page + local brief (browser + API + file)
+
+**Yahoo Finance (browser) + market data (HTTP API):** **save daily price data for a stock to the Desktop → open the symbol page → switch to News → save headline titles to a text file**. This flow adds a **data API** step on top of normal browsing. **How to wire URLs, keys, and `record-step` JSON** is in **[API notes](#api_call_notes)** below ([full `api_call` section](#api_call)).
+
+**Recording — steps in the video**
+
+1. Send **`#rpa-api`** — dedicated trigger for flows with HTTP API calls (see [**SKILL.en-US.md** — Trigger detection](SKILL.en-US.md#trigger-detection)).
+2. Task name example: align with **`registry.json`** or create a new name such as **`NVDABrief`**.
+
+**Task prompt (quotes + news + local brief)**
+
+```
+#rpa-api
+###
+Fetch NVDA daily OHLCV and save to the Desktop as nvda_time_series_daily.json
+API docs  https://www.alphavantage.co/documentation/#daily
+API key   UXZ3BOXOH817CQWS
+###
+Open Sina Finance https://finance.sina.com.cn/, search for NVDA, wait for the new page,
+click "Company News" in the left menu, wait for the new page, save the top 5 news headlines to nvda_news.txt on the Desktop.
+Merge nvda_time_series_daily.json and nvda_news.txt into a single brief file called nvda.txt.
+```
+
+Or paste the API doc parameter block directly:
+
+```
+#rpa-api
+###
+API Parameters
+❚ Required: function → TIME_SERIES_DAILY
+❚ Required: symbol   → NVDA
+❚ Required: apikey
+Example: https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&apikey=demo
+apikey  UXZ3BOXOH817CQWS
+###
+Open Sina Finance https://finance.sina.com.cn/, search for NVDA, click "Company News" on the left, save the top 5 headlines to nvda_news.txt on the Desktop.
+Merge nvda_time_series_daily.json and nvda_news.txt into nvda.txt.
+```
+
+### 4. OpenClaw + Feishu/Lark: `#rpa-list`, `#rpa-run`, and scheduled run
 
 Screen recording of a typical chat with **OpenClaw-bot** on Feishu/Lark:
 
@@ -53,7 +94,40 @@ Screen recording of a typical chat with **OpenClaw-bot** on Feishu/Lark:
 
 https://github.com/user-attachments/assets/08ccbdc6-508b-457a-87d6-49ac77e9a89e
 
+### 5. Auto-login (Cookie reuse) — record post-login pages without re-entering credentials
 
+**Scenario:** Sites like e-commerce platforms that require SMS OTP, CAPTCHA sliders, or QR-code login. Log in once manually, save the session, and every subsequent recording or replay **injects the cookies automatically** — skipping the login flow entirely.
+
+**Case: Sauce Demo — sort products by price high → low**
+
+| Step | What happens |
+|------|-------------|
+| `#rpa-login https://www.saucedemo.com/` | Browser opens the login page; you log in normally |
+| `#rpa-login-done` | Cookies exported and saved to `~/.openclaw/rpa/sessions/saucedemo.com/cookies.json` |
+| Task prompt contains `#rpa-autologin saucedemo.com` | Recorder injects cookies before the first page load |
+| Record only: open `/inventory.html` → sort `hilo` | Browser is already logged in — no re-login step needed |
+| Generated `CONFIG` carries `cookies_path` | Replay works the same way, no manual intervention |
+
+**👉 Full tutorial:** [articles/autologin-tutorial.en-US.md](articles/autologin-tutorial.en-US.md)
+
+**Command quick reference:**
+
+```
+#rpa-login <login-page-URL>       Open browser; you log in manually (password / OTP / slider)
+#rpa-login-done                   Export cookies and close browser
+#rpa-autologin <domain-or-URL>    Inject saved cookies on record or replay
+#rpa-autologin-list               List all saved login sessions
+```
+
+---
+
+### 6. AP reconciliation — GET API + local Excel + Word tables
+
+**Finance / AP:** mock **GET** pulls open payables lines; **no ERP submit/close**; match against a local invoice workbook; save a **Word (`.docx`)** report with **tables**.
+
+- **Full write-up (EN):** **[articles/scenario-ap-reconciliation.en-US.md](articles/scenario-ap-reconciliation.en-US.md)**  
+- **Full write-up (中文):** **[articles/scenario-ap-reconciliation.md](articles/scenario-ap-reconciliation.md)**  
+- **Recording:** `#rpa-api` or `#RPA`; capability **F** (Excel + Word) or **G** if a browser is needed; `api_call` + `excel_write`; add `docx` **tables** in a small post-`record-end` patch if needed (see article).
 
 Full protocol: [**SKILL.en-US.md**](SKILL.en-US.md) (ONBOARDING, RECORDING). **See what recorded RPAs exist:** **`#rpa-list`**. **Run one:** `#rpa-run:{task}` (new chat) or `run:{task}` / `python3 rpa_manager.py run <name>` (same chat).
 
@@ -85,9 +159,25 @@ python3 scripts/set_locale.py zh-CN    # or: en-US
 python3 rpa_manager.py env-check
 ```
 
+If your flow uses **Excel / Word** (capability **B–G** in **SKILL.en-US.md** / **SKILL.zh-CN.md**), use the same `python3` for e.g. `python3 rpa_manager.py deps-check D`; the skill guides `deps-install` in chat when something is missing.
+
 **SSH clone:** `git@github.com:laziobird/openclaw-rpa.git`
 
 After install, **start a new OpenClaw chat** (or reload skills) so the agent reads **`SKILL.md`**. Triggers and keywords: **`SKILL.md`** (e.g. `#RPA`, `#automation robot`).
+
+### What “full” `requirements.txt` means
+
+**Full stack** = every Python package listed in `requirements.txt` **plus** Chromium from `playwright install chromium`, all in the **same** environment as `rpa_manager.py` (e.g. `.venv` from `./scripts/install.sh`).
+
+| Dependency | Role |
+|------------|------|
+| **playwright** | Headed Recorder + generated browser automation |
+| **httpx** | `api_call` in recording and replay |
+| **openpyxl** | `excel_write` for `.xlsx` (no Microsoft Excel required) |
+| **python-docx** | `word_write` for `.docx` (`import docx`; no Microsoft Word required) |
+| **Chromium** | Installed by `playwright install chromium`, not via `pip` |
+
+See comment block at the top of `requirements.txt` for the same breakdown.
 
 ---
 
@@ -164,14 +254,55 @@ More notes: **`examples/README.md`**.
 
 ---
 
+<a id="api_call"></a>
+
+## API recording (`api_call`)
+
+The recorder supports **`api_call`** steps: **GET/POST** (or other methods) via **httpx**, with the response optionally saved under the Desktop. Full field list and progressive-probing tips: **[SKILL.en-US.md — `api_call`](SKILL.en-US.md#single-step-recording-protocol-for-every-user-instruction)** and **Scenario 1**.
+
+### API notes
+
+<a id="api_call_notes"></a>
+
+For **agents / developers** (shell, JSON, `record-step`—not the plain-language user prompt in **[§3](#api-quotes-news-brief)**).
+
+1. **What `api_call` does**  
+   Adds a step that issues an **HTTP request** to a URL (independent of the current browser page) and optionally writes the response to a Desktop file (**`save_response_to`**).
+
+2. **Key embedding strategy**  
+   In the `record-step` JSON, use **`__ENV:ENV_VAR_NAME__`** in `params` or `headers` **and** include the actual key in the step's **`"env"` field**:
+
+   ```json
+   {
+     "action": "api_call",
+     ...,
+     "params": {"apikey": "__ENV:ALPHAVANTAGE_API_KEY__", ...},
+     "env": {"ALPHAVANTAGE_API_KEY": "your-real-key"}
+   }
+   ```
+
+   The code generator detects the `env` field and **writes the key directly into the script** (e.g. `'apikey': 'your-real-key'`) — no `export` needed for replay; the script runs as-is.  
+   If `env` is omitted, the generated code uses `os.environ.get("VAR", "")` and requires `export VAR=…` before running.
+
+3. **This README's [§3](#api-quotes-news-brief) example (Alpha Vantage daily)**  
+   Docs: [TIME_SERIES_DAILY](https://www.alphavantage.co/documentation/#daily). Typical `record-step`: **`base_url`** + **`params`** (`function`, `symbol` = IBM, `outputsize` = compact, …), `apikey` = `"__ENV:ALPHAVANTAGE_API_KEY__"`, `env` with real key, **`save_response_to`** = output filename.
+
+**Summary:** Use **`__ENV:NAME__`** + **`"env"` field** together → key written into script, no `export` needed.
+
+### Example: quotes + news page + local brief
+
+**Plain-language task prompt:** **[§3](#api-quotes-news-brief)**. **Wiring:** **[API notes](#api_call_notes)**. One task can **(1)** save quote JSON, **(2)** open a news page, **(3)** **`extract_text`** into the same brief filename (append rules in **[Scenario 1](SKILL.en-US.md#scenario-1-quotes--news-page--local-brief-browser--api--file)**).
+
+---
+
 ## Roadmap (planned)
 
 The following capabilities are **not shipped yet**; they describe where the project is headed.
 
 | Area | Description |
 |:-----|:------------|
-| **API-aware recording** | Beyond browser DOM actions, bring **HTTP/API calls** and third-party automation hooks into the same **record → synthesize → replay** pipeline, so you can wire up more external services. |
-| **Configurable sign-in / session reuse** | Use **credentials or a persistent browser context** (where appropriate) so scripts can **reuse an authenticated session** instead of walking through a long login flow on every run. Recording can focus on **what happens after you’re logged in**. |
+| **Deeper API tooling** | Richer **HTTP** helpers (e.g. auth presets, response shaping) on top of today’s **`api_call`** **record → synthesize → replay** path. |
+| **✅ Auto-login / session reuse** (shipped) | `#rpa-login` for one manual login → cookies saved automatically → `#rpa-autologin` injects them on every subsequent recording and replay, no re-login needed. See **[articles/autologin-tutorial.en-US.md](articles/autologin-tutorial.en-US.md)**. |
 
 **Caveats**
 

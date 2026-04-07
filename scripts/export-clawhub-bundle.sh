@@ -4,7 +4,7 @@
 # Output: ../openclaw-rpa-clawhub-upload/ (sibling of repo root by default)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUT="${CLAWHUB_EXPORT_DIR:-$(dirname "$ROOT")/openclaw-rpa-clawhub-upload}"
+OUT="~/Desktop/openclaw-rpa-clawhub-upload}"
 
 echo "==> Source: $ROOT"
 echo "==> Output: $OUT"

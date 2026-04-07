@@ -1,6 +1,6 @@
 ---
 name: openclaw-rpa
-description: Record browser & local-file actions once; replay runs without the LLM—save $ vs AI browsing, faster, no hallucinations. github.com/laziobird/openclaw-rpa
+description: "Record browser, Excel, Word & API actions once — replay without the LLM: faster, cheaper, no hallucinations. github.com/laziobird/openclaw-rpa . Supports computer-use automation: web clicks/fill/extract, local Excel (.xlsx via openpyxl), Word (.docx via python-docx), HTTP API calls (httpx GET/POST), and auto-login cookie reuse. · Triggers: #rpa #RPA #automation-robot #rpa-api #rpa-login #rpa-login-done #rpa-autologin #rpa-autologin-list #rpa-list #rpa-run"
 metadata:
   openclaw:
     emoji: "🤖"
@@ -16,6 +16,8 @@ metadata:
 **GitHub:** **[https://github.com/laziobird/openclaw-rpa](https://github.com/laziobird/openclaw-rpa)** — source, README, install, sample scripts under `rpa/`.
 
 **Example flows** (ideas; record once, replay many times—**follow each site’s terms and local law**): **e‑commerce login & shopping**; **Yahoo Finance** stock quotes / news headlines; movie sites **reviews & ratings** in one automated run.
+
+**Written scenario (AP + Excel + Word):** **[accounts payable reconciliation (EN)](articles/scenario-ap-reconciliation.en-US.md)** · **[中文](articles/scenario-ap-reconciliation.md)** — GET mock API for open items, local Excel match vs invoices, **Word report with tables**.
 
 ## What this skill does
 
@@ -42,7 +44,7 @@ metadata:
 #rpa-run:your-task-name
 ```
 
-Full protocol, state machine, `record-step` JSON, **progressive probing**, and **selector strength** (composite CSS — container + tag / attributes / `:has()`; avoid bare `h3`) live in the locale file below.
+Full protocol, state machine, **two-line signup** (task name + capability **A–G/N**), **`deps-check` / `deps-install`**, `record-step` JSON, **progressive probing**, and **selector strength** (composite CSS — container + tag / attributes / `:has()`; avoid bare `h3`) live in the locale file below.
 
 ## Output
 
@@ -52,6 +54,7 @@ Generated file is **ordinary Python** (`rpa/*.py`) — runs standalone with `pyt
 
 **Browser** — clicks, fill, select, scroll, wait, screenshot, text extraction.  
 **Files (optional)** — `extract_text` writes to disk; patch `rpa/*.py` for folder / file ops after recording.  
+**Excel / Word (optional)** — `record-step` **`excel_write`** / **`word_write`** (openpyxl / python-docx; no Microsoft apps required); same generated `rpa/*.py` as browser steps; see locale file for signup codes and rare **append-only** fallback.  
 **Out of scope** — large ETL, databases, heavy OS automation.
 
 ## Recommended sites
@@ -100,6 +103,7 @@ After a locale change, the agent should **re-read** the matching `SKILL.*.md` in
 
 - **SKILL.md** (this file): short router + **when to use** + **quick start** for listings like [ClawHub](https://clawhub.ai/).
 - **SKILL.zh-CN.md** / **SKILL.en-US.md**: full **onboarding**, **recording**, **RUN/LIST**, and anti-timeout rules.
+- **Scenario doc:** [articles/scenario-ap-reconciliation.en-US.md](articles/scenario-ap-reconciliation.en-US.md) · [中文](articles/scenario-ap-reconciliation.md) — AP reconciliation (GET-only mock API, local Excel, Word table output).
 
 ## Relative paths
 
