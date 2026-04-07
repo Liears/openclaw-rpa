@@ -9,16 +9,11 @@
 
 Full recording walkthrough (end-to-end: trigger → record API + Excel + Word → synthesize script → replay):
 
-<!-- TODO: upload the video and replace the placeholder URL below -->
-<!-- GitHub Releases / Assets format example:
-https://github.com/user-attachments/assets/<VIDEO_ASSET_ID>
--->
 
-> **Pending:** Upload `对账-all.mp4` to GitHub (Release Assets or an issue attachment), then paste the asset URL here:
->
-> ```
-> https://github.com/user-attachments/assets/<asset-id-after-upload>
-> ```
+
+https://github.com/user-attachments/assets/c994d58a-9cbb-42e4-a01e-7d9899a39ebe
+
+
 
 **What the recording covers (4 steps)**
 
@@ -145,6 +140,12 @@ Write results to the **"Match Results"** sheet of **`ap_draft_thisweek.xlsx`** (
 | **`excel_write`** | Write **System / Invoices / Match Results** sheets; if invoices come from a separate file, add `openpyxl.load_workbook` after `record-end`. |
 | **Word table** | The recorder's **`word_write`** handles paragraph headings; for **multi-column tables** it is better to use `docx.Document` + `doc.add_table(rows=…, cols=…)` in the final `rpa/*.py`, consistent with the "append / small patch" rule in **SKILL**. |
 | **Replay** | `#rpa-run:task-name` |
+
+
+
+https://github.com/user-attachments/assets/61b4fc7c-a05a-4fc9-b41f-f29dbd48675d
+
+
 
 ---
 
