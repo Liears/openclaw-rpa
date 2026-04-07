@@ -130,7 +130,11 @@ CONFIG = {
 ```
 
 脚本启动，自动注入 Cookie，直接到达商品列表页并完成排序。
-这里放视频
+
+
+https://github.com/user-attachments/assets/233659db-f5c4-44c1-9245-0bcf53b9dfa1
+
+
 
 
 ---
@@ -139,12 +143,12 @@ CONFIG = {
 
 > **网站：** [携程旅行 passport.ctrip.com](https://passport.ctrip.com/user/login)  
 > **场景：** 保存携程登录态 → 打开指定酒店详情页 → 抓取酒店名称、评分、房型与价格 → 保存为 `hotel.docx`  
-> **资料：** 完整录制视频
 
 ### 案例完整视频
 
-> 📹 视频录制中，即将发布……  
-> 发布后将在此处嵌入 B站 / GitHub Assets 链接。
+https://github.com/user-attachments/assets/696e7b4b-5000-469f-abb8-9b8c2f023aea
+
+
 
 ---
 
