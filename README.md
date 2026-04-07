@@ -2,7 +2,72 @@
 
 English | **[中文](README.zh-CN.md)**
 
-## Case video
+> **AI-driven RPA that records once and replays forever — no model needed at run time.**
+
+**openclaw-rpa** is an **LLM-based RPA Agent framework** built on [Playwright](https://playwright.dev/python/). You describe a task in plain language; the AI drives a **real, headed browser** step by step, records every action with a screenshot proof, then compiles everything into a **standalone Playwright Python script** that runs independently — no LLM, no cloud dependency, no fragile selectors hardcoded by hand.
+
+## What you can automate
+
+| Category | Examples |
+|----------|---------|
+| **Browser** | Login, navigate, click, fill forms, extract text, sort / filter tables |
+| **HTTP API** | Call any REST endpoint (`GET` / `POST`), save JSON, embed API keys directly in the script |
+| **Excel (`.xlsx`)** | Create / update workbooks, multiple sheets, headers, freeze panes, dynamic rows from JSON or another file |
+| **Word (`.docx`)** | Generate reports with paragraphs and tables — no Microsoft Office required |
+| **Auto-login** | Save cookies once with `#rpa-login`, inject them on every future recording and replay — skip OTP / CAPTCHA flows |
+| **Mixed flows** | Any combination of the above in a single recorded task |
+
+## How it works
+
+```
+You (plain language)
+      │
+      ▼
+  #RPA / #rpa-api          ← trigger
+      │
+      ▼
+ AI drives real Chrome     ← record-step (screenshot proof every step)
+      │
+      ▼
+ "end recording"           ← synthesize
+      │
+      ▼
+ rpa/<task>.py             ← standalone Playwright Python script
+      │
+      ▼
+ python3 rpa/<task>.py     ← replay — no model, no AI, runs anywhere
+```
+
+**Why not just let the AI click the browser every time (Computer Use)?**
+
+| Pain point | What goes wrong |
+|------------|----------------|
+| 🌀 **Hallucinations** | The model sometimes clicks the wrong button, targets the wrong element, or invents an action that doesn't exist — every "improvised" run carries risk |
+| 💸 **Cost** | Every repeat run calls the LLM — tokens + tool calls + long context add up fast; a single session can easily run several dollars |
+| 🐢 **Speed** | Waiting for model inference before each step is orders of magnitude slower than running a local script directly |
+
+**What openclaw-rpa does instead:** use AI to record and verify once, then replay with a local script — **no model call, no token burn, no hallucination risk, runs in seconds**.
+
+## Quick start
+
+```bash
+# Install
+git clone https://github.com/laziobird/openclaw-rpa.git
+cd openclaw-rpa && ./scripts/install.sh
+
+# In an OpenClaw chat — pick your trigger:
+#RPA                   # browser-only flow
+#rpa-api               # flow that includes an HTTP API call
+#rpa-login <url>       # save a login session (cookies)
+#rpa-list              # list all recorded tasks
+#rpa-run:<task name>   # replay a recorded task
+```
+
+Full protocol and capability codes (A–G): **[SKILL.en-US.md](SKILL.en-US.md)**.
+
+---
+
+## Case videos
 
 ### 1. Sauce (Online Shopping WebSite) Demo (browser recording)
 
