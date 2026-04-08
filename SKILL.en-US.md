@@ -11,7 +11,7 @@ metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 
 # openclaw-rpa
 
-**Example automations** (illustrative; **obey each site’s terms of use and applicable law**): **e‑commerce login & shopping**; **Scenario 1** (below) **quotes API + news page + local brief**; **Yahoo Finance** browser-only quotes / news; movie sites **reviews & ratings** in one scripted run; **AP reconciliation** (GET-only mock API, local Excel vs invoices, **Word table** report — no ERP submit) — **[articles/scenario-ap-reconciliation.md](articles/scenario-ap-reconciliation.md)** (Chinese).
+**Example automations** (illustrative; **obey each site’s terms of use and applicable law**): **e‑commerce login & shopping**; **Scenario 1** (below) **quotes API + news page + local brief**; **Yahoo Finance** browser-only quotes / news; movie sites **reviews & ratings** in one scripted run; **AP reconciliation** (GET-only mock API, local Excel vs invoices, **Word table** report — no ERP submit) — **[EN](articles/scenario-ap-reconciliation.en-US.md)** · **[中文](articles/scenario-ap-reconciliation.md)**.
 
 ## What this skill does
 
@@ -66,7 +66,7 @@ In chat, prefer **`#rpa-list`** → **`#rpa-run:your-task-name`** so names match
 | **Browser only** | **E‑commerce:** login → browse → cart/checkout (`rpa/电商网站购物*.py` style). **Yahoo Finance:** quotes / headlines. **Movies:** aggregate **reviews & ratings**. |
 | **Browser then files** | Same flow, plus **`extract_text`** when asked. |
 | **Browser + HTTP API + files** | **Scenario 1:** **`api_call`** (e.g. [Alpha Vantage TIME_SERIES_DAILY](https://www.alphavantage.co/documentation/#daily)) saves JSON/text locally, then **`goto` + `extract_text`** for a brief. |
-| **HTTP API + Excel + Word (browser optional)** | **AP reconciliation:** mock **GET** batches, local sheets, **no submit**; output **.docx** with tables — see **[articles/scenario-ap-reconciliation.md](articles/scenario-ap-reconciliation.md)**. |
+| **HTTP API + Excel + Word (browser optional)** | **AP reconciliation:** mock **GET** batches, local sheets, **no submit**; output **.docx** with tables — see **[EN](articles/scenario-ap-reconciliation.en-US.md)** · **[中文](articles/scenario-ap-reconciliation.md)**. |
 | **Files only in script** | After **`record-end`**, add folder cleanup—**no URL** for that block. |
 
 ## Recommended sites for getting started
@@ -153,9 +153,7 @@ IDLE ──"#rpa-run:{task}" / "run:{task}"──► RUN ──► IDLE
 IDLE ──"#rpa-list"──► LIST ──► IDLE
 ```
 
-> **Note:** For codes **B / C / F**, **`record-start` still opens Chrome** (Playwright). Users may ignore the window and use **`api_call`**, **`merge_files`**, **`excel_write`**, **`word_write`**, etc.
-
----
+> **Note:** For codes **B / C / F / N**, **`record-start` does NOT open Chrome** — no browser is launched. The agent issues `excel_write`, `word_write`, `api_call`, `merge_files`, `python_snippet` steps directly without any browser window.
 
 ---
 
@@ -264,7 +262,7 @@ Later runs use that script directly—no need for the model to drive every click
 
 ── Sign-up (one message) ──
 Format:  Task name  Capability code
-Example: Supplier reconciliation sheet F
+Example: reconciliation  F
 
 Capability code (one trailing uppercase letter):
   A  Browser only
@@ -291,11 +289,12 @@ Common commands:
 • "abort" → close the browser and discard this session
 • Multi-step plans: **continue**, **1**, **next** (same as "ok", "y", "go")
 • HTTP API: **`api_call`** during recording, or start with **`#rpa-api`**.
+• Help / view all commands: start with **`#rpa-help`**.
 
-Good sites: Yahoo Finance, BBC News, Hacker News, GitHub public pages, Sauce Demo (saucedemo.com), Wikipedia.
+Good sites: Yahoo Finance, BBC News, Hacker News, GitHub public pages, Wikipedia.
 Not recommended: CAPTCHAs, or highly dynamic SPAs.
 
-Send: task name + space + capability letter (e.g. "Supplier reconciliation sheet F")
+Send: task name + capability letter (e.g. "reconciliation  F")
 ```
 
 ---
@@ -441,7 +440,7 @@ python3 ~/.openclaw/workspace/skills/openclaw-rpa/rpa_manager.py record-step '{"
 | `merge_files` | — | — | **Merge Desktop files** (pure local, no browser): **`sources`** (list of filenames under `~/Desktop`), **`target`** (output filename), optional **`separator`** (default `"\n\n"`). Typical use: combine an `api_call` JSON with an `extract_text` news file into a single brief. |
 | `excel_write` | — | — | **Write `.xlsx`** (openpyxl; **no Microsoft Excel required**). **`path`** or **`value`**: relative filename (recording writes under **~/Desktop**; generated script uses `CONFIG["output_dir"]`). **`sheet`**: worksheet name. **`headers`**: optional list of header strings. **Row data — pick one**: ① **`rows`**: static 2-D array of cell values; ② **`rows_from_json`**: `{"file":"x.json","outer_key":"batches","inner_key":"lines","fields":["f1","f2"],"parent_fields":["batch_id"]}` — dynamically flatten a nested JSON array from Desktop (`inner_key`/`parent_fields` optional); ③ **`rows_from_excel`**: `{"file":"发票导入_本周.xlsx","sheet":"发票侧","skip_header":true}` — copy data rows from another xlsx sheet. **`freeze_panes`**: optional e.g. `"A2"`. **`hidden_columns`**: optional list of **1-based** column indexes to hide (e.g. `[1]` hides column A). **`replace_sheet`**: default `true` (delete same-named sheet then recreate); `false` appends **`rows`** at the end of an existing sheet. |
 | `word_write` | — | — | **Write `.docx`** (python-docx; **no Word app required**). **`path`** or **`value`**: relative filename. **`paragraphs`**: list of strings (one paragraph each). **`table`**: optional — `{"headers": [...], "rows": [[...]]}` inserts a table after paragraphs (auto-applies "Table Grid" style). **`mode`**: `new` (default) or `append` (append to existing file). |
-| `python_snippet` | — | — | **Inject Python code directly into the generated script.** **`code`**: multi-line string executed inside `async def run()`'s `try` block at the same level as `api_call`/`excel_write`/`word_write`; can access `page`, `CONFIG`, `load_workbook`, `Document`, etc. Use for **computed logic** (matching loops, data transforms) where `rows` cannot be statically provided at record time. **No side-effects during recording** — only writes the `code_block`. |
+| `python_snippet` | — | — | **Inject Python code directly into the generated script.** **`code`**: multi-line string executed inside `async def run()`'s `try` block at the same level as `api_call`/`excel_write`/`word_write`; can access `page`, `CONFIG`, `load_workbook`, `Document`, etc. Use for **computed logic** (matching loops, data transforms) where `rows` cannot be statically provided at record time. **The code is executed immediately at record time** to validate dependencies, file existence, and logic — a runtime error during recording means the snippet is rejected before it enters the script. |
 | `wait` | — | milliseconds | Wait |
 
 > `extract_text` supports an optional **`"limit": N`** — only the first **N** matches.

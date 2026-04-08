@@ -311,14 +311,14 @@ python3 rpa_manager.py run wikipedia
 ## 示例脚本（`rpa/`）
 
 
-| 脚本                         | 说明                                    |
-| -------------------------- | ------------------------------------- |
-| `wikipedia.py` / `wiki.py` | 维基百科（英文）                              |
-| `获取豆瓣电影数据.py`、`获取豆瓣电影数据.py` 等 | 中文界面示例（遵守站点规则）；浏览器录屏案例见 [豆瓣电影（《霸王别姬》）](#douban-movie-demo) |
-| `电商网站购物v10.py` 等           | Sauce Demo 电商流程（与顶部 [演示视频](#演示视频) 同类） |
-
-
-更多说明见 `**examples/README.md**`。
+| 脚本 | 说明 |
+|------|------|
+| `wikipedia.py` / `wiki.py` | 维基百科（英文） |
+| `获取豆瓣电影数据.py` 等 | 中文界面示例（遵守站点规则）；浏览器录屏案例见 [豆瓣电影（《霸王别姬》）](#douban-movie-demo) |
+| `电商网站购物v10.py` 等 | Sauce Demo 电商流程（与顶部 [演示视频](#演示视频) 同类） |
+| `apiv3.py`（`apiV3`） | **纯 API** — Alpha Vantage `TIME_SERIES_DAILY` 拉取 NVDA 日线数据 → 保存 `nvda_time_series_daily.json` 到桌面；无浏览器步骤 |
+| `reconciliationv2.py`（`reconciliationV2`） | **应付对账（英文版）** — Mock GET 拉待对账数据 → `ap_draft_thisweek.xlsx`（System / Invoices / Match Results，两阶段 po_ref + 金额匹配）→ `ap_reconciliation_YYYYMMDD.docx` Word 表格报告（见[案例文档](articles/scenario-ap-reconciliation.en-US.md)） |
+| `会计记账v2.py`（`会计记账V2`） | **应付对账（中文版）** — 同上流程中文化：Mock GET → `对账底稿_本周.xlsx`（系统侧 / 发票侧 / 匹配结果）→ `对账报告_YYYYMMDD.docx` Word 表格报告（见[案例文档](articles/scenario-ap-reconciliation.md)） |
 
 ---
 

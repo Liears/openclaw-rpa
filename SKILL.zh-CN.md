@@ -1,6 +1,6 @@
 ---
 name: openclaw-rpa
-description: 录制浏览器网站与本机文件操作；回放不调大模型—省费用、更快、少幻觉。github.com/laziobird/openclaw-rpa · #rpa-list #rpa-run #rpa-login #rpa-login-done #rpa-autologin #rpa-autologin-list #rpa-help #运行 #自动化机器人 #RPA。Use when user says #自动化机器人, #RPA, #rpa, #rpa-list, #rpa-login, #rpa-autologin, #rpa-help, 录制自动化, browser automation, or asks to automate browser/file tasks.
+description: 录制浏览器网站与本机文件操作；回放不调大模型—省费用、更快、少幻觉。github.com/laziobird/openclaw-rpa · #rpa-run #rpa-login #rpa-login-done #rpa-autologin #rpa-autologin-list #rpa-help #运行 #自动化机器人 #RPA。Use when user says #自动化机器人, #RPA, #rpa, #rpa-list, #rpa-login, #rpa-autologin, 录制自动化, browser automation, or asks to automate browser/file tasks.
 metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 ---
 
@@ -294,8 +294,6 @@ python3 rpa_manager.py record-start "任务名" --autologin passport.ctrip.com
 
 ---
 
----
-
 ## RPA-API 状态
 
 触发：消息含 **`#rpa-api`**（不区分大小写）。
@@ -427,10 +425,11 @@ API Parameters
 • 输入"#结束录制" → 生成可独立运行的 Playwright 脚本（含 Office 时见 GENERATING 增补规则）
 • 输入"#放弃"     → 关闭浏览器，清空本次录制
 • 多步任务拆成计划后，要进入下一步时可只发:**#继续**、**1** 或 **next**（与「#好」「#下一步」「ok」一样有效）
-• 任务里需要调用 HTTP API？录制时可直接下达 **`api_call`** 步骤，或开头改用 **`#rpa-api`**。
+• 任务里需要调用 HTTP API？**新建对话**发送 **`#rpa-api`** 触发专用录制流程（`#rpa-api` 是 IDLE 触发词，不是录制中的步骤指令）。
+• 查看帮助或所有可用指令：**`#rpa-help`**；查看已录制任务列表：**`#rpa-list`**（两者功能不同）。
 
-推荐网站：Yahoo 财经、BBC News、Hacker News、GitHub 公开页、Sauce Demo（saucedemo.com）、Wikipedia。
-不建议：含验证码的网站（reCAPTCHA / hCaptcha / Cloudflare），或 DOM 每次渲染都会变化的高度动态 SPA。
+推荐网站：Yahoo 财经、BBC News、Hacker News、GitHub 公开页、Wikipedia。
+不建议：含验证码、短信的网站（reCAPTCHA / hCaptcha）
 
 请发送：任务名称 + 空格 + 能力码（例如：供应商对账入表 F）
 ```

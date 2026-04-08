@@ -314,8 +314,9 @@ Recorder: `record-start` → `record-step` → `record-end` (see `rpa_manager.py
 | `获取豆瓣电影数据.py` | Chinese UI demo (follow site rules) |
 | `onlineshoppingv1.py` (and related) | Sauce Demo flow (same as the [demo video](#demo-video) at the top) |
 | `yahoonew.py` (`YahooNew` in **`registry.json`**) | Yahoo Finance quote → **News** tab → top 5 headlines to Desktop (see [Yahoo Finance demo](#yahoo-finance-nvda-demo)) |
-
-More notes: **`examples/README.md`**.
+| `apiv3.py` (`apiV3`) | **API only** — Alpha Vantage `TIME_SERIES_DAILY` for NVDA → saves `nvda_time_series_daily.json` to Desktop; no browser steps |
+| `reconciliationv2.py` (`reconciliationV2`) | **AP reconciliation (EN)** — Mock GET open payables → `ap_draft_thisweek.xlsx` (System / Invoices / Match Results sheets, two-stage po_ref + amount matching) → `ap_reconciliation_YYYYMMDD.docx` Word table report (see [scenario](articles/scenario-ap-reconciliation.en-US.md)) |
+| `会计记账v2.py` (`会计记账V2`) | **AP reconciliation (CN)** — same flow in Chinese: Mock GET → `对账底稿_本周.xlsx`（系统侧 / 发票侧 / 匹配结果）→ `对账报告_YYYYMMDD.docx` Word table report (see [scenario](articles/scenario-ap-reconciliation.md)) |
 
 ---
 

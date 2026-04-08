@@ -30,6 +30,12 @@ rsync -a --delete \
   --exclude '*.gif' \
   --exclude '*.mp4' \
   --exclude '*.jsonl' \
+  --exclude 'rpa/' \  # exclude rpa folder
+  --exclude 'images/' \  # exclude images folder  
+  --exclude 'articles/wechat-openclaw-rpa-intro.md' \  # exclude articles folder    
+  --exclude 'scripts/gen_fixture_invoice_import.py' \  # exclude scripts folder    
+  --exclude 'scripts/export-clawhub-bundle.sh' \  # exclude scripts folder   
+  --exclude 'articles/openapi-ap-reconciliation-mock.yaml' \  # exclude articles folder      
   "$ROOT/" "$OUT/"
 
 # ClawHub rejects dotfiles named .gitignore; keep them in git, omit from upload bundle.
