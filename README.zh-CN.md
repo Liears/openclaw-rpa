@@ -363,15 +363,6 @@ python3 rpa_manager.py run wikipedia
 
 ---
 
-## 未来计划（规划中）
-
-以下能力**尚未发布**，仅说明项目方向。
-
-| 方向 | 说明 |
-|:-----|:-----|
-| **API 能力增强** | 在已有 **`api_call`**「录制 → 合成 → 回放」链路之上，提供更顺手的 **HTTP** 辅助（如鉴权模板、响应处理）等。 |
-| **✅ 自动登录 / Cookie 会话复用**（已发布） | `#rpa-login` 手动登录一次 → 自动保存 Cookie → `#rpa-autologin` 注入，录制与回放均无需重走登录流程。详见 **[articles/autologin-tutorial.md](articles/autologin-tutorial.md)**。 |
-
 **说明与边界**
 
 - **合规**：请遵守各网站服务条款与使用政策；本仓库不鼓励绕过风控或在禁止场景下抓取数据。
