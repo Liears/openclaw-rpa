@@ -360,16 +360,6 @@ For **agents / developers** (shell, JSON, `record-step`—not the plain-language
 **Plain-language task prompt:** **[§3](#api-quotes-news-brief)**. **Wiring:** **[API notes](#api_call_notes)**. One task can **(1)** save quote JSON, **(2)** open a news page, **(3)** **`extract_text`** into the same brief filename (append rules in **[Scenario 1](SKILL.en-US.md#scenario-1-quotes--news-page--local-brief-browser--api--file)**).
 
 ---
-
-## Roadmap (planned)
-
-The following capabilities are **not shipped yet**; they describe where the project is headed.
-
-| Area | Description |
-|:-----|:------------|
-| **Deeper API tooling** | Richer **HTTP** helpers (e.g. auth presets, response shaping) on top of today’s **`api_call`** **record → synthesize → replay** path. |
-| **✅ Auto-login / session reuse** (shipped) | `#rpa-login` for one manual login → cookies saved automatically → `#rpa-autologin` injects them on every subsequent recording and replay, no re-login needed. See **[articles/autologin-tutorial.en-US.md](articles/autologin-tutorial.en-US.md)**. |
-
 **Caveats**
 
 - **Compliance:** Follow each site’s terms of service and policies. This repo does not endorse evading safeguards or scraping where it isn’t allowed.
