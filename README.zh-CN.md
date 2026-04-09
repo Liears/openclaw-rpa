@@ -42,7 +42,7 @@
 
 ![shopping-hd-960p](https://github.com/user-attachments/assets/4c30d799-803e-458b-a496-ee5f38513da8)
 
-### **竞争优势 **
+### 竞争优势 
 
 | 特性 | 传统 RPA (UIPath 等) | 纯 LLM Agent (Browser-use 等) | **OpenClaw-RPA (编译器模式)** |
 | :--- | :--- | :--- | :--- |
