@@ -40,7 +40,8 @@ Current AI Web Agents are amazing but **fundamentally flawed** for production:
 | 💸 **Cost:** $$$ (Tokens) | 💰 **Cost:** $0.00 (Pure Python) |
 | 🐢 **Speed:** Slow (Reasoning) | 🚀 **Speed:** Instant (Execution) |
 
-![shopping-hd](https://github.com/user-attachments/assets/482f6783-2563-4d3d-8af6-21db92d2d89c)
+![shopping-hd-960p](https://github.com/user-attachments/assets/4c30d799-803e-458b-a496-ee5f38513da8)
+
 
 ## What you can automate
 
