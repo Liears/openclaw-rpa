@@ -1,10 +1,46 @@
-# openclaw-rpa
+# 🚀 OpenClaw-RPA 
 
 English | **[中文](README.zh-CN.md)**
 
-> **AI-driven RPA that records once and replays forever — no model needed at run time.**
+### **The "RPA Compiler" for AI Agents.**
+**Record once → Replay as deterministic Python. Stop the "LLM Tax" on repetitive tasks.**
 
-**openclaw-rpa** is an **LLM-based RPA Agent framework**. You describe a task in plain language; the AI executes it step by step in a **real browser, on your computer, or via API services** — with screenshot proof at every step — then compiles everything into a **standalone Python script**. Replay requires no LLM, no cloud dependency; just let OpenClaw select and run the automation task automatically.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Playwright](https://img.shields.io/badge/powered%20by-Playwright-green)](https://playwright.dev/)
+
+---
+
+## 💡 Why OpenClaw-RPA?
+
+Current AI Web Agents are amazing but **fundamentally flawed** for production:
+* **The "LLM Tax":** Why pay for tokens every time your agent clicks a "Download" button it has clicked 100 times before?
+* **Latency:** Waiting for an LLM to "reason" through a fixed UI is painfully slow.
+* **Fragility:** High-temperature models can hallucinate and break stable workflows.
+
+**OpenClaw-RPA bridges the gap.** Use the intelligence of LLMs to **discover and record** a workflow *once*, then compile it into a **standalone, high-speed Playwright script** that runs with **ZERO token cost** forever.
+
+---
+
+## ✨ Key Features
+
+* **⚡ Zero-Token Replay:** Compile Agent reasoning into pure Python. Save 100% of inference costs on daily repetitive tasks.
+* **🔑 Session Persistence (#rpa-login):** Manually solve 2FA, QR codes, or SMS once. The tool auto-injects cookies into all future headless runs. **Bypass login walls forever.**
+* **🌐 HTTP API Recording:** Mix REST `GET/POST` calls with browser steps in a single, replayable script.
+* **📄 Native Office Automation:** Build-in `excel_write` and `word_write`. **No Microsoft Office installation required.** Perfect for Linux/Docker environments.
+* **🔗 Seamless Integration:** Designed as a powerful skill for the OpenClaw ecosystem but generates standard Python/Playwright code.
+
+---
+
+## 🎥 Show, Don't Tell
+
+| **Record Mode (LLM Thinking)** | **Replay Mode (Deterministic Script)** |
+| :--- | :--- |
+| *Agent analyzes the DOM and plans actions...* | *Executes at native code speed...* |
+| 💸 **Cost:** $$$ (Tokens) | 💰 **Cost:** $0.00 (Pure Python) |
+| 🐢 **Speed:** Slow (Reasoning) | 🚀 **Speed:** Instant (Execution) |
+
+![shopping-hd](https://github.com/user-attachments/assets/482f6783-2563-4d3d-8af6-21db92d2d89c)
 
 ## What you can automate
 
@@ -15,9 +51,7 @@ English | **[中文](README.zh-CN.md)**
 | **Excel (`.xlsx`)** | Create / update workbooks, multiple sheets, headers, freeze panes, dynamic rows from JSON or another file |
 | **Word (`.docx`)** | Generate reports with paragraphs and tables — no Microsoft Office required |
 | **Auto-login** | Save cookies once with `#rpa-login`, inject them on every future recording and replay — skip OTP / CAPTCHA flows |
-| **Mixed flows** | Any combination of the above in a single recorded task |
-
-## How it works
+| **Mixed flows** | Any combination of the above in a single recorded task 
 
 ```
 You (plain language)
