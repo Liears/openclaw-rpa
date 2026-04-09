@@ -36,6 +36,8 @@ rsync -a --delete \
   --exclude 'scripts/gen_fixture_invoice_import.py' \
   --exclude 'scripts/export-clawhub-bundle.sh' \
   --exclude 'articles/openapi-ap-reconciliation-mock.yaml' \
+  --exclude 'articles/fixtures/' \
+  --exclude '*.code-workspace' \
   "$ROOT/" "$OUT/"
 
 # ClawHub rejects dotfiles named .gitignore; keep them in git, omit from upload bundle.

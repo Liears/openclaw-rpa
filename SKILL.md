@@ -35,7 +35,7 @@ metadata:
 | **Auto-login** | Save cookies once with `#rpa-login`, auto-inject on every recording and replay — skip OTP / CAPTCHA / QR-code flows |
 | **Mixed flows** | Any combination above in a single recorded task (e.g. API + Excel + Word, or browser + login + extract) |
 
-**Recorded example scripts** (under `rpa/`): `onlineshoppingv1.py` e-commerce · `yahoonew.py` Yahoo Finance news · `apiv3.py` Alpha Vantage API (NVDA daily JSON, no browser) · `reconciliationv2.py` / `会计记账v2.py` AP reconciliation (GET → Excel match → Word table report) — full write-up: **[EN](articles/scenario-ap-reconciliation.en-US.md)** · **[中文](articles/scenario-ap-reconciliation.md)**.
+**Recorded example scripts** (under `rpa/`): `onlineshoppingv1.py` e-commerce · `yahoonew.py` Yahoo Finance news · `apiv3.py` Alpha Vantage API (NVDA daily JSON, no browser) · `reconciliationv2.py` / `会计记账v2.py` AP reconciliation (GET → Excel match → Word table report) — full write-up: **[EN](articles/scenario-ap-reconciliation.en-US.md)** · **[CN](articles/scenario-ap-reconciliation.md)**.
 
 ## When to use
 
@@ -44,7 +44,7 @@ metadata:
 | **Start recording** a new flow | `#automation robot`, `#RPA`, `#rpa`, or mention **Playwright automation** |
 | **See saved tasks** you can run | `#rpa-list` |
 | **Run a saved task** (e.g. new chat) | `#rpa-run:{task name}` |
-| **Run in this chat** | `run:{task name}` (`zh-CN`: `#运行:{任务名}`) |
+| **Run in this chat** | `run:{task name}` (`zh-CN`: `#run:{task-name}`) |
 
 ## Quick start (after install)
 
@@ -114,7 +114,7 @@ After a locale change, the agent should **re-read** the matching `SKILL.*.md` in
 
 - **SKILL.md** (this file): short router + **when to use** + **quick start** for listings like [ClawHub](https://clawhub.ai/).
 - **SKILL.zh-CN.md** / **SKILL.en-US.md**: full **onboarding**, **recording**, **RUN/LIST**, and anti-timeout rules.
-- **Scenario doc:** [articles/scenario-ap-reconciliation.en-US.md](articles/scenario-ap-reconciliation.en-US.md) · [中文](articles/scenario-ap-reconciliation.md) — AP reconciliation (GET-only mock API, local Excel, Word table output).
+- **Scenario doc:** [articles/scenario-ap-reconciliation.en-US.md](articles/scenario-ap-reconciliation.en-US.md) · [CN](articles/scenario-ap-reconciliation.md) — AP reconciliation (GET-only mock API, local Excel, Word table output).
 
 ## Relative paths
 
