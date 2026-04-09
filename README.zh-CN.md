@@ -40,7 +40,7 @@
 | 💸 **成本：** $$$ (消耗 Token) | 💰 **成本：** $0.00 (纯 Python) |
 | 🐢 **速度：** 缓慢 (需要推理) | 🚀 **速度：** 瞬间 (直接执行) |
 
-![shopping-hd](https://github.com/user-attachments/assets/482f6783-2563-4d3d-8af6-21db92d2d89c)
+![shopping-hd-960p](https://github.com/user-attachments/assets/4c30d799-803e-458b-a496-ee5f38513da8)
 
 
 ## 工作原理
