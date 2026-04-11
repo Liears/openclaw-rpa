@@ -24,7 +24,7 @@
 
 ## ✨ 核心特性
 
-* **⚡ 零 Token 重放：** 将 Agent 的推理过程编译为纯 Python 代码。在日常重复任务中节省 100% 的推理成本。
+* **⚡ 零 Token 重放：** 将 Agent 的推理过程编译为纯 Python 代码。在日常重复任务中节省 100% 的推理成本。比如：在实时浏览器窗口中立即回放你录制的操作行为。
 * **🔑 会话保持与免登录 (#rpa-login)：** 手动解决一次 2FA、二维码或短信验证。工具会自动将 Cookie 注入到未来的所有无头（Headless）运行中。**永久绕过登录墙。**
 * **🌐 HTTP API 记录：** 在同一个可重放脚本中，将 REST `GET/POST` 请求与浏览器操作完美融合。
 * **📄 原生 Office 自动化：** 内置 `excel_write` 和 `word_write`。**无需安装 Microsoft Office。** 非常适合 Linux/Docker 环境。
