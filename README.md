@@ -24,7 +24,7 @@ Current AI Web Agents are amazing but **fundamentally flawed** for production:
 
 ## ✨ Key Features
 
-* **⚡ Zero-Token Replay:** Compile Agent reasoning into pure Python. Save 100% of inference costs on daily repetitive tasks.
+* **⚡ Zero-Token Replay:** Compile Agent reasoning into pure Python. Save 100% of inference costs on daily repetitive tasks.Like: Instantly replay your recorded sequence in a live browser window.
 * **🔑 Session Persistence (#rpa-login):** Manually solve 2FA, QR codes, or SMS once. The tool auto-injects cookies into all future headless runs. **Bypass login walls forever.**
 * **🌐 HTTP API Recording:** Mix REST `GET/POST` calls with browser steps in a single, replayable script.
 * **📄 Native Office Automation:** Build-in `excel_write` and `word_write`. **No Microsoft Office installation required.** Perfect for Linux/Docker environments.
