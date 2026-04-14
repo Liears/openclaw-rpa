@@ -195,15 +195,17 @@ Open Sina Finance https://finance.sina.com.cn/, search for NVDA, click "Company 
 Merge nvda_time_series_daily.json and nvda_news.txt into nvda.txt.
 ```
 
-### 4. Airbnb Competitor Price Tracker (Browser + Vision + Word)
+### 4. Airbnb Competitor Price Tracker (Browser + Vision + Word) 🆕
 
-**Scenario:** Zero-code creation of an RPA robot that automatically opens a browser, extracts Airbnb competitor prices and ratings, and generates a Word report.
+> [!TIP]
+> **Featured case — Real Computer-Use agent in production.**
+> Zero-code RPA robot: open browser → visual recognition → extract prices & ratings → append to a Word report.
+> Airbnb is a heavily dynamic **SPA**; traditional crawlers fail here. This case introduces **vision mode** — the AI reads the screen like a human, powered by **[Qwen3-VL](https://github.com/QwenLM/Qwen3-VL)** (Alibaba open-source, ultra-low token cost, local-deploy friendly).
+> Record **once** → auto-generate a Python script → all future runs execute the script directly: **zero Token cost, zero hallucinations, deterministic results.**
+>
+> 📖 **[Full step-by-step tutorial →](articles/scenario-airbnb-compare.md)**
 
-- **Full tutorial (CN):** **[articles/scenario-airbnb-compare.md](articles/scenario-airbnb-compare.md)**
-- **Notes:** Record once, auto-generate a Python script. Replay runs the underlying code directly—extremely fast, zero Token cost, and no AI hallucinations.
-- **Vision mode for SPAs:** Airbnb is a heavily dynamic Single-Page Application. Traditional crawlers struggle with it. This case uses **visual recognition** to extract data exactly as a human would read the screen — powered by [Qwen3-VL](https://github.com/QwenLM/Qwen3-VL) (Alibaba's open-source vision model), which has low token cost and supports local deployment.
-
-### 4. OpenClaw + Feishu/Lark: `#rpa-list`, `#rpa-run`, and scheduled run
+### 5. OpenClaw + Feishu/Lark: `#rpa-list`, `#rpa-run`, and scheduled run
 
 Screen recording of a typical chat with **OpenClaw-bot** on Feishu/Lark:
 
@@ -214,7 +216,7 @@ Screen recording of a typical chat with **OpenClaw-bot** on Feishu/Lark:
 
 https://github.com/user-attachments/assets/08ccbdc6-508b-457a-87d6-49ac77e9a89e
 
-### 5. Auto-login (Cookie reuse) — record post-login pages without re-entering credentials
+### 6. Auto-login (Cookie reuse) — record post-login pages without re-entering credentials
 
 **Scenario:** Sites like e-commerce platforms that require SMS OTP, CAPTCHA sliders, or QR-code login. Log in once manually, save the session, and every subsequent recording or replay **injects the cookies automatically** — skipping the login flow entirely.
 
@@ -241,7 +243,7 @@ https://github.com/user-attachments/assets/08ccbdc6-508b-457a-87d6-49ac77e9a89e
 
 ---
 
-### 6. AP reconciliation — GET API + local Excel + Word tables
+### 7. AP reconciliation — GET API + local Excel + Word tables
 
 **Finance / AP:** mock **GET** pulls open payables lines; **no ERP submit/close**; match against a local invoice workbook; save a **Word (`.docx`)** report with **tables**.
 
