@@ -12,6 +12,7 @@
 ---
 
 ## 💡 为什么选择 OpenClaw-RPA？
+https://github.com/user-attachments/assets/e3ed5b34-1ddb-43a6-af42-2d1a907d3564
 
 目前的 AI 网页、Computer Use Agent 虽然强大，但在生产环境中存在**本质缺陷**：
 * **“大模型税” (LLM Tax)：** 为什么要为了 Agent 点击一个它已经点过 100 次的“下载”按钮而重复支付 Token 费用？
