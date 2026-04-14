@@ -13,10 +13,7 @@ English | **[中文](README.zh-CN.md)**
 
 ## 💡 Why OpenClaw-RPA?
 
-
-
-https://github.com/user-attachments/assets/6f343a3a-6c66-4c4d-a189-147b2b071214
-
+https://github.com/user-attachments/assets/e3ed5b34-1ddb-43a6-af42-2d1a907d3564
 
 Current AI Web、Computer、Workflow Agents are amazing but **fundamentally flawed** for production:
 * **The "LLM Tax":** Why pay for tokens every time your agent clicks a "Download" button it has clicked 100 times before?
