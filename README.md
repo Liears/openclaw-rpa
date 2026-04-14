@@ -203,7 +203,7 @@ Merge nvda_time_series_daily.json and nvda_news.txt into nvda.txt.
 > Airbnb is a heavily dynamic **SPA**; traditional crawlers fail here. This case introduces **vision mode** — the AI reads the screen like a human, powered by **[Qwen3-VL](https://github.com/QwenLM/Qwen3-VL)** (Alibaba open-source, ultra-low token cost, local-deploy friendly).
 > Record **once** → auto-generate a Python script → all future runs execute the script directly: **zero Token cost, zero hallucinations, deterministic results.**
 >
-> 📖 **[Full step-by-step tutorial →](articles/scenario-airbnb-compare.md)**
+> 📖 **[Full step-by-step tutorial (EN) →](articles/scenario-airbnb-compare.en-US.md)** · **[中文 →](articles/scenario-airbnb-compare.md)**
 
 ### 5. OpenClaw + Feishu/Lark: `#rpa-list`, `#rpa-run`, and scheduled run
 
