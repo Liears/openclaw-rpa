@@ -2,6 +2,12 @@
 
 本教程将手把手教你如何使用 OpenClaw-RPA 技能，通过一段简单的“大白话”，制作一个能自动打开浏览器、提取 Airbnb 竞品价格与评分，并最终生成 Word 报告的 RPA 机器人。
 
+
+
+https://github.com/user-attachments/assets/829a0cf4-95e3-4dc0-9701-e0f40dea4f65
+
+
+
 **核心优势：** 录制一次，自动生成 Python 脚本。以后每次运行直接跑底层代码，**速度极快，且零 Token 消耗，不会产生 AI 幻觉。**
 
 ---
@@ -69,6 +75,9 @@ urls:
 
 *(这个过程 AI 会消耗少量 Token 进行推理，但这是**一次性**的。)*
 
+![Airbnb1-9](https://github.com/user-attachments/assets/09023f4c-aece-4793-afc3-fdddcbbc5cfb)
+
+
 ---
 
 ## 🚀 第四步：日常运行（零成本回放）
@@ -89,6 +98,8 @@ urls:
 ```bash
 python3 rpa/Airbnb比价追踪.py
 ```
+
+
 
 ---
 
