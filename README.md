@@ -13,7 +13,12 @@ English | **[中文](README.zh-CN.md)**
 
 ## 💡 Why OpenClaw-RPA?
 
-Current AI Web Agents are amazing but **fundamentally flawed** for production:
+
+
+https://github.com/user-attachments/assets/6f343a3a-6c66-4c4d-a189-147b2b071214
+
+
+Current AI Web、Computer、Workflow Agents are amazing but **fundamentally flawed** for production:
 * **The "LLM Tax":** Why pay for tokens every time your agent clicks a "Download" button it has clicked 100 times before?
 * **Latency:** Waiting for an LLM to "reason" through a fixed UI is painfully slow.
 * **Fragility:** High-temperature models can hallucinate and break stable workflows.
@@ -51,8 +56,6 @@ Current AI Web Agents are amazing but **fundamentally flawed** for production:
 | **2FA Handling** | Extremely Complex | Costly (Requires live reasoning) | **Simple (One-time session capture)** |
 | **Environment** | Windows & MS Office | Flexible (But expensive) | **Cloud-Native (Linux/Docker ready)** |
 | **Architecture** | Manual Flowcharts | Real-time Reasoning | **Reason Once → Compile → Replay** |
-
-![shopping-hd-960p](https://github.com/user-attachments/assets/4c30d799-803e-458b-a496-ee5f38513da8)
 
 
 ## What you can automate
