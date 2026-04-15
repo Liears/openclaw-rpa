@@ -355,6 +355,19 @@ Full guide — key embedding strategy, env field, examples:
 
 ## Author Contact
 
+### Enterprise & industry-specific customization
+
+This repo ships as an **open-source skill** with a **general recording protocol**—great for individuals and teams automating typical browser and local-file workflows. If your needs look more like the table below, reach out via the channels at the bottom with **industry context, system boundaries, compliance constraints, and how you want it delivered**. We can discuss **tailored builds** for complex commercial scenarios (scope, timeline, and pricing depend on the engagement—no obligation to quote).
+
+| Scenario | What we can shape together |
+|----------|----------------------------|
+| **Deep workflows** | Multi-branch logic, exception handling, human-in-the-loop steps, long reconciliation chains, or merging several data sources |
+| **Vertical / industry fit** | Finance, supply chain, e-commerce ops, general price-comparison systems, internal ERP/OA plus external sites—field definitions, audit trails, and report layouts aligned to your org |
+| **Integration & operations** | Hooks into your gateway, queues, secrets management, scheduling at scale, private or air-gapped-style deployments |
+| **Reliability at scale** | High-friction sites, vision + DOM hybrid flows, custom validation and document templates, stronger performance and observability |
+
+**Contact (open-source questions or commercial inquiries):**
+
 - WeChat: `nizhanali`
 - Gmail: `greentim2049@gmail.com`
 
