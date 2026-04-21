@@ -100,7 +100,7 @@ You (plain language)
 
 ## Case videos
 
-### 1. Sauce (Online Shopping WebSite) Demo (browser recording)
+### 1. E-Commerce Demo — browser recording
 
 **Sauce Demo** ([saucedemo.com](https://www.saucedemo.com)): **sign in → sort by price → add two most expensive → sign out**.  
 Shows the full flow from trigger through recording to a generated script.
@@ -118,6 +118,12 @@ https://github.com/user-attachments/assets/965fbecc-a0fc-4795-9f63-a5ef126f97f8
 2. Sort **price high → low**.  
 3. Add the **two most expensive** items to the cart.  
 4. **Log out**.
+
+**Real-world variant — Amazon Best Sellers data extraction** ([`rpa/amazonbestseller.py`](rpa/amazonbestseller.py))
+
+Same flow on a live production site: scrape the first 40 products (title, price, rating, review count, URL) from Amazon search results and append a timestamped Word table to the Desktop. The `data_groups` DOM analysis layer auto-detects product card containers and field selectors from the real page — no hardcoded selectors, no guessing.
+
+📖 **[Full tutorial →](articles/scenario-amazon-bestsellers.en-US.md)**
 
 <a id="yahoo-finance-nvda-demo"></a>
 
@@ -331,18 +337,27 @@ Recorder: `record-start` → `record-step` → `record-end` (see `rpa_manager.py
 
 ## Sample scripts (`rpa/`)
 
+All scripts below are registered in **`registry.json`** and can be listed with **`#rpa-list`** or run with **`#rpa-run:<name>`** / `python3 rpa_manager.py run <name>`.
+
 <details>
 <summary>View all sample scripts</summary>
 
-| Script | Notes |
-|--------|--------|
-| `wikipedia.py` / `wiki.py` | Wikipedia (English) |
-| `获取豆瓣电影数据.py` | Chinese UI demo (follow site rules) |
-| `onlineshoppingv1.py` (and related) | Sauce Demo flow (same as the [demo video](#demo-video) at the top) |
-| `yahoonew.py` (`YahooNew` in **`registry.json`**) | Yahoo Finance quote → **News** tab → top 5 headlines to Desktop (see [Yahoo Finance demo](#yahoo-finance-nvda-demo)) |
+| Script (`registry.json` name) | Notes |
+|-------------------------------|-------|
+| `wiki.py` (`wiki`) | Wikipedia search → extract article summary to Desktop |
+| `onlineshoppingv1.py` (`onlineShoppingV1`) | Sauce Demo — sign in → sort by price → add two most expensive to cart → log out (see [E-Commerce Demo](#1-e-commerce-demo--browser-recording)) |
+| `电商网站购物v10.py` (`电商网站购物V10`) | Sauce Demo — Chinese-language variant of the shopping flow |
+| `yahoonew.py` (`YahooNew`) | Yahoo Finance — search NVDA → News tab → save top 5 headlines to Desktop (see [Yahoo Finance demo](#yahoo-finance-nvda-demo)) |
+| `获取豆瓣电影数据.py` (`获取豆瓣电影数据`) | Douban Movie — search a film → open detail page → extract title, rating, synopsis → save to Desktop (see [Douban demo](#2-yahoo-finance-nvda-news--browser-recording)) |
+| `amazonbestseller.py` (`amazonbestseller`) | **Amazon Best Sellers** — scrape first 40 products (title, price, rating, reviews, URL) → append Word table to Desktop (see [tutorial](articles/scenario-amazon-bestsellers.en-US.md)) |
+| `airbnb民宿比价分析v11.py` (`airbnb民宿比价分析v11`) | **Airbnb price tracker** — open browser → vision recognition → extract competitor prices & ratings → append Word report (see [scenario](articles/scenario-airbnb-compare.en-US.md)) |
+| `携程酒店v3.py` (`携程酒店V3`) | **Ctrip hotel** — auto-login with saved cookies → open hotel detail page → extract name, rating, room types & prices → save to `hotel.docx` (see [auto-login tutorial](articles/autologin-tutorial.en-US.md)) |
+| `自动登录v3.py` (`自动登录V3`) | Auto-login demo — inject saved session cookies before recording; skip OTP / CAPTCHA on every subsequent run |
 | `apiv3.py` (`apiV3`) | **API only** — Alpha Vantage `TIME_SERIES_DAILY` for NVDA → saves `nvda_time_series_daily.json` to Desktop; no browser steps |
-| `reconciliationv2.py` (`reconciliationV2`) | **AP reconciliation (EN)** — Mock GET open payables → `ap_draft_thisweek.xlsx` (System / Invoices / Match Results sheets, two-stage po_ref + amount matching) → `ap_reconciliation_YYYYMMDD.docx` Word table report (see [scenario](articles/scenario-ap-reconciliation.en-US.md)) |
-| `会计记账v2.py` (`会计记账V2`) | **AP reconciliation (CN)** — same flow in Chinese: Mock GET → `对账底稿_本周.xlsx`（系统侧 / 发票侧 / 匹配结果）→ `对账报告_YYYYMMDD.docx` Word table report (see [scenario](articles/scenario-ap-reconciliation.md)) |
+| `api_demov3.py` (`api_demoV3`) | **API + browser** — Alpha Vantage market data + Sina Finance news → merge into a local brief file |
+| `hotelv2.py` (`hotelv2`) | Mock GET hotel data API → save response to `hotel.txt`; minimal browser-free API demo |
+| `reconciliationv2.py` (`reconciliationV2`) | **AP reconciliation (EN)** — Mock GET open payables → `ap_draft_thisweek.xlsx` (System / Invoices / Match Results, two-stage matching) → `ap_reconciliation_YYYYMMDD.docx` Word report (see [scenario](articles/scenario-ap-reconciliation.en-US.md)) |
+| `会计记账v2.py` (`会计记账V2`) | **AP reconciliation (CN)** — same flow in Chinese: Mock GET → `对账底稿_本周.xlsx` → `对账报告_YYYYMMDD.docx` Word report (see [scenario](articles/scenario-ap-reconciliation.md)) |
 
 </details>
 
