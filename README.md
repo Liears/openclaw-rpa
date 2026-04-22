@@ -31,6 +31,31 @@
 
 - [rpa/SKILL.md](rpa/SKILL.md)
 
+### 安装到其他 agent
+
+如果目标 agent 的 skill 机制是“一个 skill 对应一个文件夹，文件夹内包含 `SKILL.md`”，那么安装方式很直接：
+
+1. 把本仓库里的 `rpa/` 整个文件夹复制到目标 agent 的 skills 目录。
+2. 进入复制后的 `rpa/` 目录。
+3. 执行：
+
+```bash
+./scripts/install.sh
+```
+
+4. 验证：
+
+```bash
+python3 scripts/rpa_manager.py help
+```
+
+说明：
+
+- 不要只复制 `SKILL.md`，要复制整个 `rpa/` 文件夹。
+- 运行依赖在 `scripts/`、`requirements.txt`、`registry.json` 中。
+- 录制生成的脚本默认写到 skill 包内部的 `rpa/rpa/` 目录。
+- 登录 Cookie 保存在用户目录 `~/.openclaw/rpa/sessions/`，不在 skill 包内。
+
 如果你要在本地运行它：
 
 1. 进入 skill 目录：
