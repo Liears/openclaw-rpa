@@ -1,11 +1,11 @@
-# Local skill config (use config.example.json)
-/config.json
+# Local files
 /.codex
+/config.json
 
 # Session & recorder runtime
-/session.json
-/recorder_session/
-/proofs/
+/openclaw-rpa-skill/session.json
+/openclaw-rpa-skill/recorder_session/
+/openclaw-rpa-skill/proofs/
 
 # Python
 __pycache__/
@@ -29,7 +29,7 @@ venv/
 /clawhub-upload/
 
 # Generated RPA outputs
-/rpa/*.py
-/rpa/*.jsonl
-/rpa/*.md
-!/rpa/.gitkeep
+/openclaw-rpa-skill/rpa/*.py
+/openclaw-rpa-skill/rpa/*.jsonl
+/openclaw-rpa-skill/rpa/*.md
+!/openclaw-rpa-skill/rpa/.gitkeep
