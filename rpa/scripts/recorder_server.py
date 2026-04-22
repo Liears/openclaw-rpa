@@ -42,7 +42,7 @@ def _timed_print(*args, **kwargs):  # type: ignore[override]
 _builtins.print = _timed_print
 # ─────────────────────────────────────────────────────────────────────────────
 
-SKILL_DIR   = Path(__file__).parent
+SKILL_DIR   = Path(__file__).parent.parent
 SESSION_DIR = SKILL_DIR / "recorder_session"
 
 POLL_INTERVAL = 0.15  # seconds

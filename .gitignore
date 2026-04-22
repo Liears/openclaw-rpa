@@ -1,9 +1,12 @@
-# Local skill config (use config.example.json)
-/config.json
+# Local skill config
+rpa/config.json
 
 # Session & recorder runtime
-/session.json
-/recorder_session/
+rpa/session.json
+rpa/recorder_session/
+
+# Login sessions (sensitive)
+.openclaw/
 
 # Python
 __pycache__/
@@ -20,13 +23,8 @@ venv/
 .idea/
 .vscode/
 
-# Logs (if any)
+# Logs
 *.log
 
-# Optional local ClawHub export dir (if you set CLAWHUB_EXPORT_DIR inside this repo)
-/clawhub-upload/
-
-# Local / optional articles & scripts (not tracked)
-/articles/openapi-ap-reconciliation-mock.yaml
-/scripts/gen_fixture_invoice_import.py
-/articles/wechat-openclaw-rpa-intro.md
+# ClawHub export
+clawhub-upload/

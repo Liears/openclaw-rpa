@@ -58,7 +58,7 @@ def _timed_print(*args, **kwargs):  # type: ignore[override]
 _builtins.print = _timed_print
 # ─────────────────────────────────────────────────────────────────────────────
 
-SKILL_DIR        = Path(__file__).parent
+SKILL_DIR        = Path(__file__).parent.parent
 SESSION_FILE     = SKILL_DIR / "session.json"
 REGISTRY_FILE    = SKILL_DIR / "registry.json"
 RPA_DIR          = SKILL_DIR / "rpa"
