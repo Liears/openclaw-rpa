@@ -1,10 +1,10 @@
-# OpenClaw RPA Skill
+# RPA Skill
 
 这个仓库现在按“外层说明 + 内层 skill 包”组织。
 
 ## 目录结构
 
-- `openclaw-rpa-skill/`
+- `rpa/`
   真正的 skill 包目录，包含：
   - `SKILL.md`：给 agent 读取的核心协议
   - `agents/openai.yaml`：skill UI 元数据
@@ -29,14 +29,14 @@
 
 如果你是把它当作 skill 包使用，核心内容在：
 
-- [openclaw-rpa-skill/SKILL.md](openclaw-rpa-skill/SKILL.md)
+- [rpa/SKILL.md](rpa/SKILL.md)
 
 如果你要在本地运行它：
 
 1. 进入 skill 目录：
 
 ```bash
-cd openclaw-rpa-skill
+cd rpa
 ```
 
 2. 安装依赖：
@@ -65,5 +65,5 @@ python3 scripts/rpa_manager.py login-done
 ## 说明
 
 - 根目录 README 面向人阅读
-- `openclaw-rpa-skill/` 目录面向 skill/agent 运行
-- 录制后生成的脚本默认写到 `openclaw-rpa-skill/rpa/`
+- `rpa/` 目录面向 skill/agent 运行
+- 录制后生成的脚本默认写到 `rpa/rpa/`

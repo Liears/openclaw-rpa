@@ -1,5 +1,5 @@
 ---
-name: openclaw-rpa
+name: rpa
 description: 录制浏览器、API、Excel、Word 自动化为可回放的 Python Playwright 脚本。用于 `#rpa`、`#rpa-api`、`#rpa-list`、`#rpa-run`、`#rpa-login` 等流程。
 metadata:
   openclaw:
@@ -7,7 +7,7 @@ metadata:
     os: ["darwin", "linux"]
 ---
 
-# openclaw-rpa
+# rpa
 
 只保留中文核心协议。
 
