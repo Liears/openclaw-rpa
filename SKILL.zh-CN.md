@@ -6,18 +6,7 @@ metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 
 # openclaw-rpa
 
-只保留核心协议。详细案例、教程、背景说明按需读取 `references/`、`README*`、`articles/`。
-
-## 何时使用
-
-当用户要做以下事情时使用本 skill：
-
-- 录制一个新的 RPA 任务
-- 运行已保存的 RPA 脚本
-- 查询已保存任务
-- 保存或复用网站登录 Cookie
-- 查看可用命令
-- 录制包含浏览器、API、Excel、Word 的混合流程
+只保留核心协议。
 
 ## 触发词
 
@@ -84,11 +73,3 @@ metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 - DOM 不稳定或页面是重型 SPA 时，优先考虑 `extract_by_vision`。
 - 生成物必须保持为可独立运行的 Python 脚本。
 - 这个 skill 不是数据库、重型 ETL、系统运维工具。
-
-## 按需参考
-
-仅在需要更多细节时再读：
-
-- `references/guide.zh-CN.md`
-- `README.zh-CN.md`
-- `articles/`

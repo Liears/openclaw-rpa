@@ -7,18 +7,7 @@ metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 
 # openclaw-rpa
 
-Keep only the core protocol in context. Load `references/`, `README*`, and `articles/` only when more detail is required.
-
-## When To Use
-
-Use this skill when the user wants to:
-
-- record a new RPA task
-- run an existing recorded task
-- list saved tasks
-- save or reuse login cookies
-- show available commands
-- record mixed browser, API, Excel, and Word workflows
+Keep only the core protocol in context.
 
 ## Triggers
 
@@ -85,11 +74,3 @@ Match in this priority order:
 - Prefer `extract_by_vision` when DOM extraction is unstable or the site is a heavy SPA.
 - Generated outputs must remain standalone Python scripts.
 - This skill is not for databases, heavy ETL, or system operations.
-
-## On-Demand References
-
-Read only if needed:
-
-- `references/guide.en-US.md`
-- `README.md`
-- `articles/`

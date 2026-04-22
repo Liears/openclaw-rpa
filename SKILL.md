@@ -13,15 +13,7 @@ metadata:
 
 # openclaw-rpa
 
-This skill is for recording deterministic RPA workflows and replaying them as standalone Python scripts under `rpa/`.
-
-## What To Keep In Context
-
-- Trigger detection for `#rpa`, `#rpa-api`, `#rpa-list`, `#rpa-run`, `#rpa-login`, `#rpa-login-done`, and `#rpa-autologin-list`
-- Trigger detection for `#rpa-autologin <domain|url>` and `#rpa-help`
-- Mapping user intent to `rpa_manager.py` commands
-- The minimal recording workflow: confirm task, start recording, send small `record-step` actions, end with script generation
-- Core constraints: keep steps small, avoid dumping large snapshots into chat, prefer deterministic actions
+Load one locale file and follow only that file.
 
 ## Locale Loading
 
@@ -31,14 +23,4 @@ This skill is for recording deterministic RPA workflows and replaying them as st
    - `zh-CN` -> `SKILL.zh-CN.md`
    - `en-US` -> `SKILL.en-US.md`
 
-After loading the locale file, follow that file for reply language, trigger handling, command mapping, and workflow rules.
-
-## References
-
-Load only when needed:
-
-- `references/guide.zh-CN.md`
-- `references/guide.en-US.md`
-- `README.md`
-- `README.zh-CN.md`
-- `articles/`
+After loading the locale file, follow only that file for reply language, trigger handling, command mapping, workflow rules, and constraints.
