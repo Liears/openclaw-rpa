@@ -1,0 +1,3 @@
+interface:
+  display_name: "RPA"
+  short_description: "录制并回放浏览器与文件自动化"

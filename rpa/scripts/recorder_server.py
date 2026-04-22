@@ -42,7 +42,7 @@ def _timed_print(*args, **kwargs):  # type: ignore[override]
 _builtins.print = _timed_print
 # ─────────────────────────────────────────────────────────────────────────────
 
-SKILL_DIR   = Path(__file__).parent
+SKILL_DIR   = Path(__file__).resolve().parent.parent
 SESSION_DIR = SKILL_DIR / "recorder_session"
 
 POLL_INTERVAL = 0.15  # seconds
@@ -558,7 +558,7 @@ def _excel_write_run(data: dict) -> Optional[str]:
         from openpyxl import Workbook, load_workbook
         from openpyxl.utils import get_column_letter
     except ImportError:
-        return "缺少 openpyxl：请执行 python3 rpa_manager.py deps-install B 或 pip install openpyxl / Missing openpyxl: run 'python3 rpa_manager.py deps-install B' or 'pip install openpyxl'"
+        return "缺少 openpyxl：请执行 python3 scripts/rpa_manager.py deps-install B 或 pip install openpyxl / Missing openpyxl: run 'python3 scripts/rpa_manager.py deps-install B' or 'pip install openpyxl'"
 
     rel = (data.get("path") or data.get("value") or "").strip()
     sheet = (data.get("sheet") or "").strip()
@@ -1002,8 +1002,8 @@ async def _python_snippet_run(code: str, page) -> Optional[str]:
     if missing_required:
         pkgs = " ".join(missing_required)
         cap = "B" if "openpyxl" in missing_required else "C"
-        return (f"python_snippet 缺少依赖：{pkgs}。请先执行：python3 rpa_manager.py deps-install {cap}"
-                f" / python_snippet missing deps: {pkgs}. Run: python3 rpa_manager.py deps-install {cap}")
+        return (f"python_snippet 缺少依赖：{pkgs}。请先执行：python3 scripts/rpa_manager.py deps-install {cap}"
+                f" / python_snippet missing deps: {pkgs}. Run: python3 scripts/rpa_manager.py deps-install {cap}")
 
     # Compile (syntax check on wrapped code; adjust reported line by -1 for wrapper)
     try:
@@ -1034,7 +1034,7 @@ def _word_write_run(data: dict) -> Optional[str]:
     try:
         from docx import Document
     except ImportError:
-        return "缺少 python-docx：请执行 python3 rpa_manager.py deps-install C 或 pip install python-docx / Missing python-docx: run 'python3 rpa_manager.py deps-install C' or 'pip install python-docx'"
+        return "缺少 python-docx：请执行 python3 scripts/rpa_manager.py deps-install C 或 pip install python-docx / Missing python-docx: run 'python3 scripts/rpa_manager.py deps-install C' or 'pip install python-docx'"
 
     # Accept "path", "target" (common AI alias), or legacy fallback "value" for the file path.
     rel = (data.get("path") or data.get("target") or data.get("value") or "").strip()

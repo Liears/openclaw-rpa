@@ -254,7 +254,7 @@ def print_deps_capability_report(letter: str) -> int:
         cap = normalize_capability_letter(letter)
         print(
             "\nFix (same Python as Playwright / rpa_manager):\n"
-            "  python3 rpa_manager.py deps-install "
+            "  python3 scripts/rpa_manager.py deps-install "
             + (cap or letter.upper()),
         )
         return 1
