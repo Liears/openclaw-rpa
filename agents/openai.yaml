@@ -1,0 +1,3 @@
+interface:
+  display_name: "OpenClaw RPA"
+  short_description: "Record and replay browser and file automation"

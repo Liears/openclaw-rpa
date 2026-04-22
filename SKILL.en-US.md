@@ -25,18 +25,18 @@ Match in this priority order:
 
 ## Command Mapping
 
-- List tasks: `python3 rpa_manager.py list`
-- Run task: `python3 rpa_manager.py run "<task>"`
-- Start recording: `python3 rpa_manager.py record-start "<task>" [--profile A-N] [--autologin <domain>]`
-- Record one step: `python3 rpa_manager.py record-step '<json>'`
-- Finish recording: `python3 rpa_manager.py record-end`
-- Abort recording: `python3 rpa_manager.py record-end --abort`
-- Check dependencies: `python3 rpa_manager.py deps-check <A-N>`
-- Install dependencies: `python3 rpa_manager.py deps-install <A-N>`
-- Start login capture: `python3 rpa_manager.py login-start <url>`
-- Finish login capture: `python3 rpa_manager.py login-done`
-- List saved login sessions: `python3 rpa_manager.py login-list`
-- Show help: `python3 rpa_manager.py help`
+- List tasks: `python3 scripts/rpa_manager.py list`
+- Run task: `python3 scripts/rpa_manager.py run "<task>"`
+- Start recording: `python3 scripts/rpa_manager.py record-start "<task>" [--profile A-N] [--autologin <domain>]`
+- Record one step: `python3 scripts/rpa_manager.py record-step '<json>'`
+- Finish recording: `python3 scripts/rpa_manager.py record-end`
+- Abort recording: `python3 scripts/rpa_manager.py record-end --abort`
+- Check dependencies: `python3 scripts/rpa_manager.py deps-check <A-N>`
+- Install dependencies: `python3 scripts/rpa_manager.py deps-install <A-N>`
+- Start login capture: `python3 scripts/rpa_manager.py login-start <url>`
+- Finish login capture: `python3 scripts/rpa_manager.py login-done`
+- List saved login sessions: `python3 scripts/rpa_manager.py login-list`
+- Show help: `python3 scripts/rpa_manager.py help`
 
 ## Minimal Workflow
 
@@ -59,7 +59,7 @@ Match in this priority order:
 
 ## Help
 
-- For `#rpa-help`, call `python3 rpa_manager.py help` and return the result.
+- For `#rpa-help`, call `python3 scripts/rpa_manager.py help` and return the result.
 
 ## Supported Actions
 

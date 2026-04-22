@@ -24,18 +24,18 @@ metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 
 ## 命令映射
 
-- 查看任务：`python3 rpa_manager.py list`
-- 运行任务：`python3 rpa_manager.py run "<任务名>"`
-- 开始录制：`python3 rpa_manager.py record-start "<任务名>" [--profile A-N] [--autologin <domain>]`
-- 录制步骤：`python3 rpa_manager.py record-step '<json>'`
-- 结束录制：`python3 rpa_manager.py record-end`
-- 放弃录制：`python3 rpa_manager.py record-end --abort`
-- 检查依赖：`python3 rpa_manager.py deps-check <A-N>`
-- 安装依赖：`python3 rpa_manager.py deps-install <A-N>`
-- 开始登录态保存：`python3 rpa_manager.py login-start <url>`
-- 完成登录态保存：`python3 rpa_manager.py login-done`
-- 查看登录态：`python3 rpa_manager.py login-list`
-- 查看帮助：`python3 rpa_manager.py help`
+- 查看任务：`python3 scripts/rpa_manager.py list`
+- 运行任务：`python3 scripts/rpa_manager.py run "<任务名>"`
+- 开始录制：`python3 scripts/rpa_manager.py record-start "<任务名>" [--profile A-N] [--autologin <domain>]`
+- 录制步骤：`python3 scripts/rpa_manager.py record-step '<json>'`
+- 结束录制：`python3 scripts/rpa_manager.py record-end`
+- 放弃录制：`python3 scripts/rpa_manager.py record-end --abort`
+- 检查依赖：`python3 scripts/rpa_manager.py deps-check <A-N>`
+- 安装依赖：`python3 scripts/rpa_manager.py deps-install <A-N>`
+- 开始登录态保存：`python3 scripts/rpa_manager.py login-start <url>`
+- 完成登录态保存：`python3 scripts/rpa_manager.py login-done`
+- 查看登录态：`python3 scripts/rpa_manager.py login-list`
+- 查看帮助：`python3 scripts/rpa_manager.py help`
 
 ## 最小工作流
 
@@ -58,7 +58,7 @@ metadata: {"openclaw": {"emoji": "🤖", "os": ["darwin", "linux"]}}
 
 ## 帮助
 
-- `#rpa-help` 时，直接调用 `python3 rpa_manager.py help` 并返回结果。
+- `#rpa-help` 时，直接调用 `python3 scripts/rpa_manager.py help` 并返回结果。
 
 ## 支持动作
 

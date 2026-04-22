@@ -4,36 +4,36 @@ OpenClaw RPA Manager — 状态持久化 & 脚本生成 CLI
 OpenClaw RPA Manager — Session persistence & script generation CLI
 
 【登录会话管理 / Login Session Management（复杂登录 / SMS OTP / CAPTCHA / slider）】
-  python3 rpa_manager.py login-start <url>   # 打开浏览器到登录页，用户手动完成登录 / Open browser to login page; user logs in manually
-  python3 rpa_manager.py login-done          # 导出当前 Cookie 并关闭浏览器 / Export cookies & close browser
-  python3 rpa_manager.py login-list          # 列出所有已保存的登录会话 / List all saved login sessions
-  python3 rpa_manager.py help                # 显示完整指令列表与简单用法 / Show full command reference
+  python3 scripts/rpa_manager.py login-start <url>   # 打开浏览器到登录页，用户手动完成登录 / Open browser to login page; user logs in manually
+  python3 scripts/rpa_manager.py login-done          # 导出当前 Cookie 并关闭浏览器 / Export cookies & close browser
+  python3 scripts/rpa_manager.py login-list          # 列出所有已保存的登录会话 / List all saved login sessions
+  python3 scripts/rpa_manager.py help                # 显示完整指令列表与简单用法 / Show full command reference
   # Cookie 存储于 ~/.openclaw/rpa/sessions/{domain}/cookies.json（勿提交 git）
   # Cookies stored at ~/.openclaw/rpa/sessions/{domain}/cookies.json (never commit to git)
   # 录制/回放时任务描述含 #rpa-autologin <domain|url> 则自动注入
   # Add #rpa-autologin <domain|url> to task description to auto-inject cookies on record/replay
 
 【Recorder 模式 / Recorder Mode — 推荐，有界面真实录制 / Recommended: headed real-browser recording】
-  python3 rpa_manager.py record-start <task> [--profile A]   # 启动 headed Playwright / Start headed Playwright; --profile writes to task.json
-  python3 rpa_manager.py deps-check <A-N>        # 按能力码检查依赖 / Check deps by capability code
-  python3 rpa_manager.py deps-install <A-N>      # 安装缺失依赖 / Install missing deps
-  python3 rpa_manager.py record-step '<json>'    # 执行单步操作 / Execute a single recorded step
-  python3 rpa_manager.py record-status           # 查看 Recorder 状态 / Check recorder status
-  python3 rpa_manager.py record-end              # 结束录制，生成脚本 / End recording, compile script
-  python3 rpa_manager.py record-end --abort      # 放弃录制 / Abort recording
+  python3 scripts/rpa_manager.py record-start <task> [--profile A]   # 启动 headed Playwright / Start headed Playwright; --profile writes to task.json
+  python3 scripts/rpa_manager.py deps-check <A-N>        # 按能力码检查依赖 / Check deps by capability code
+  python3 scripts/rpa_manager.py deps-install <A-N>      # 安装缺失依赖 / Install missing deps
+  python3 scripts/rpa_manager.py record-step '<json>'    # 执行单步操作 / Execute a single recorded step
+  python3 scripts/rpa_manager.py record-status           # 查看 Recorder 状态 / Check recorder status
+  python3 scripts/rpa_manager.py record-end              # 结束录制，生成脚本 / End recording, compile script
+  python3 scripts/rpa_manager.py record-end --abort      # 放弃录制 / Abort recording
   # 每步指令与生成代码片段追加写入 recorder_session/playwright_commands.jsonl
   # Each step appended to recorder_session/playwright_commands.jsonl; copied to rpa/{slug}_playwright_commands.jsonl on end
 
 【Legacy 模式 / Legacy Mode — 兼容保留 / kept for compatibility; requires manual screenshot proof】
-  python3 rpa_manager.py init <task_name>
-  python3 rpa_manager.py add --proof <file> '<json>'
-  python3 rpa_manager.py generate
+  python3 scripts/rpa_manager.py init <task_name>
+  python3 scripts/rpa_manager.py add --proof <file> '<json>'
+  python3 scripts/rpa_manager.py generate
 
 【通用命令 / General Commands】
-  python3 rpa_manager.py run <task_name>   # 运行已保存的任务 / Run a saved task
-  python3 rpa_manager.py list              # 列出所有任务 / List all tasks
-  python3 rpa_manager.py status            # 查看当前状态 / Show current session status
-  python3 rpa_manager.py reset             # 清空 Buffer / Clear buffer
+  python3 scripts/rpa_manager.py run <task_name>   # 运行已保存的任务 / Run a saved task
+  python3 scripts/rpa_manager.py list              # 列出所有任务 / List all tasks
+  python3 scripts/rpa_manager.py status            # 查看当前状态 / Show current session status
+  python3 scripts/rpa_manager.py reset             # 清空 Buffer / Clear buffer
 """
 
 import argparse
@@ -58,7 +58,7 @@ def _timed_print(*args, **kwargs):  # type: ignore[override]
 _builtins.print = _timed_print
 # ─────────────────────────────────────────────────────────────────────────────
 
-SKILL_DIR        = Path(__file__).parent
+SKILL_DIR        = Path(__file__).resolve().parent.parent
 SESSION_FILE     = SKILL_DIR / "session.json"
 REGISTRY_FILE    = SKILL_DIR / "registry.json"
 RPA_DIR          = SKILL_DIR / "rpa"
@@ -728,7 +728,7 @@ def cmd_login_start(url: str) -> int:
         json.dumps(task_payload, ensure_ascii=False, indent=2)
     )
 
-    server_script = SKILL_DIR / "recorder_server.py"
+    server_script = SKILL_DIR / "scripts" / "recorder_server.py"
     if not server_script.exists():
         print(f"❌ recorder_server.py 不存在 / not found: {server_script}", file=sys.stderr)
         return 1
@@ -756,7 +756,7 @@ def cmd_login_start(url: str) -> int:
 
     print(f"✅ 浏览器已打开 / Browser opened → {url}")
     print(f"   请在浏览器窗口中完成登录（账号/密码/短信/滑块等所有验证）。/ Complete login in the browser window (password / OTP / slider / QR code, etc.).")
-    print(f"   确认已登录后，执行 / When done, run: python3 rpa_manager.py login-done")
+    print(f"   确认已登录后，执行 / When done, run: python3 scripts/rpa_manager.py login-done")
     return 0
 
 
@@ -827,14 +827,14 @@ def cmd_login_list() -> int:
 
     if not SESSIONS_DIR.exists():
         print("📭 暂无已保存的登录会话。")
-        print(f"   使用 python3 rpa_manager.py login-start <url> 来保存。")
+        print(f"   使用 python3 scripts/rpa_manager.py login-start <url> 来保存。")
         return 0
 
     domains = sorted(d for d in SESSIONS_DIR.iterdir()
                      if d.is_dir() and (d / "cookies.json").exists())
     if not domains:
         print("📭 暂无已保存的登录会话。")
-        print(f"   使用 python3 rpa_manager.py login-start <url> 来保存。")
+        print(f"   使用 python3 scripts/rpa_manager.py login-start <url> 来保存。")
         return 0
 
     print(f"\n{'域名':<32} {'条数':>4} {'会话型':>4} {'保存时间':<22} 状态")
@@ -890,7 +890,7 @@ def cmd_help() -> int:
       打开 headed 浏览器到登录页，用户手动完成登录。
       Open headed browser to login page; user logs in manually.
       示例 / Example:
-        python3 rpa_manager.py login-start https://passport.ctrip.com/user/login
+        python3 scripts/rpa_manager.py login-start https://passport.ctrip.com/user/login
 
   login-done
       登录完成后执行，导出 Cookie 并关闭浏览器。
@@ -919,8 +919,8 @@ def cmd_help() -> int:
       向 Recorder 发送一步操作（goto / click / fill / snapshot 等）。
       Send a single action step to the running Recorder.
       示例 / Example:
-        python3 rpa_manager.py record-step '{"action":"snapshot"}'
-        python3 rpa_manager.py record-step '{"action":"goto","url":"https://example.com"}'
+        python3 scripts/rpa_manager.py record-step '{"action":"snapshot"}'
+        python3 scripts/rpa_manager.py record-step '{"action":"goto","url":"https://example.com"}'
 
   record-status
       查看当前 Recorder 运行状态与已录步骤数。
@@ -946,7 +946,7 @@ def cmd_help() -> int:
       设置多步执行计划，LLM 每轮只推进一步。
       Set a multi-step plan; LLM advances one step per turn.
       示例 / Example:
-        python3 rpa_manager.py plan-set '["打开携程首页","搜索酒店","截图结果"]'
+        python3 scripts/rpa_manager.py plan-set '["打开携程首页","搜索酒店","截图结果"]'
 
   plan-next      推进到下一步 / Advance to next step.
   plan-status    查看计划进度 / Show plan progress.
@@ -1021,7 +1021,7 @@ def cmd_record_start(
             print(f"   Cookie 文件：{resolved_cookies_file}")
         else:
             print(f"⚠️  未找到 {domain} 的登录会话文件：{cookies_file_path}", file=sys.stderr)
-            print(f"   请先执行：python3 rpa_manager.py login-start <登录页URL>", file=sys.stderr)
+            print(f"   请先执行：python3 scripts/rpa_manager.py login-start <登录页URL>", file=sys.stderr)
             return 1
 
     # Clean up any stale session / 清理残留会话
@@ -1057,7 +1057,7 @@ def cmd_record_start(
     # Removed by plan-set (multi-step) or record-task-ready (single-step).
     (SESSION_REC_DIR / "waiting_for_task_description").touch()
 
-    server_script = SKILL_DIR / "recorder_server.py"
+    server_script = SKILL_DIR / "scripts" / "recorder_server.py"
     if not server_script.exists():
         print(f"❌ recorder_server.py 不存在：{server_script}", file=sys.stderr)
         return 1
