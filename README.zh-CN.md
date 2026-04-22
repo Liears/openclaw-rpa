@@ -6,7 +6,8 @@
 
 ```
 openclaw-rpa/
-├── README.md              # 本文件
+├── README.zh-CN.md        # 本文件
+├── .gitignore
 └── rpa/                   # ⭐ Skill 包（可独立分发）
     ├── SKILL.md           # 核心协议与触发词
     ├── scripts/           # 运行脚本
@@ -20,19 +21,43 @@ openclaw-rpa/
     │   ├── amazonbestseller.py
     │   ├── airbnb民宿比价分析v11.py
     │   └── ...
+    ├── pkgs/              # 离线安装包
+    │   ├── *.whl          # Python 依赖（15 个包）
+    │   └── browsers/      # Chromium 浏览器二进制
     ├── registry.json      # 任务注册表
     └── requirements.txt   # Python 依赖
 ```
 
-## 安装
+## 在线安装
 
 ```bash
-# 安装依赖
+# 安装 Python 依赖
 pip install -r rpa/requirements.txt
 
 # 安装浏览器
 playwright install chromium
 ```
+
+## 离线安装（完全断网环境）
+
+```bash
+# 1. 安装 Python 依赖
+pip3 install --no-index \
+  --find-links=rpa/pkgs/ \
+  --break-system-packages \
+  playwright httpx openpyxl python-docx
+
+# 2. 安装浏览器（二进制）
+PLAYWRIGHT_BROWSERS_PATH=0 \
+  python3 -m playwright install --with-deps chromium
+```
+
+**离线包大小：**
+- Python whl：`rpa/pkgs/` 约 51MB
+- 浏览器二进制：`rpa/pkgs/browsers/` 约 280MB
+- **合计约 330MB**
+
+> 首次安装成功后，后续运行 `rpa/scripts/rpa_manager.py` 无需任何网络连接。
 
 ## 快速开始
 
